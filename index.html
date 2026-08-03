@@ -177,7 +177,6 @@
         <select id="select-music-a">
           <option value="music1" selected>曲1 (music1.mp3)</option>
           <option value="music2">曲2 (music2.mp3)</option>
-          <option value="music3">曲3 (music3.mp3)</option>
         </select>
       </div>
     </div>
@@ -193,7 +192,6 @@
         <select id="select-music-b">
           <option value="music1">曲1 (music1.mp3)</option>
           <option value="music2" selected>曲2 (music2.mp3)</option>
-          <option value="music3">曲3 (music3.mp3)</option>
         </select>
       </div>
     </div>
@@ -205,10 +203,10 @@
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
     scene-gestures>
     
+    <!-- ★修正1: 存在しないmusic3を削除しました -->
     <a-assets>
       <audio id="music1" src="music1.mp3" preload="auto"></audio>
       <audio id="music2" src="music2.mp3" preload="auto"></audio>
-      <audio id="music3" src="music3.mp3" preload="auto"></audio>
     </a-assets>
 
     <a-marker preset="hiro" id="marker-a"></a-marker>
@@ -216,53 +214,40 @@
 
     <!-- ▼ A面のコンテンツ -->
     <a-entity id="content-a" visible="false" follow-marker="#marker-a">
-      <!-- ★修正：ラジカセと歌詞カードを「まとめて」90度起き上がらせる -->
-      <a-entity rotation="-90 0 0">
-        
-        <!-- 歌詞カード（ラジカセの少し上、少し奥） -->
-        <a-entity position="0 1.2 -0.5" scale="2 0.5 1">
-          <a-plane color="#FDF5E6" material="shader: flat;" position="0 0 0"></a-plane>
-          <a-plane id="ar-text-a"
-                   canvas-text="value: いつもありがとう。; color: #333333;" 
-                   position="0 0 0.05" 
-                   material="transparent: true; opacity: 1; alphaTest: 0.5;">
-          </a-plane>
-        </a-entity>
-        
-        <!-- ラジカセ -->
-        <a-entity 
-          id="model-a"
-          gltf-model="url(boombox.glb)" 
-          scale="1.5 1.5 1.5" 
-          position="0 0 0">
-        </a-entity>
-
+      <!-- ★修正2: side: double を追加して裏から見ても白く表示されるようにしました -->
+      <a-entity position="0 1.2 -0.5" rotation="-90 0 0" scale="2 0.5 1">
+        <a-plane color="#FDF5E6" material="shader: flat; side: double;" position="0 0 0"></a-plane>
+        <a-plane id="ar-text-a"
+                 canvas-text="value: いつもありがとう。; color: #333333;" 
+                 position="0 0 0.05" 
+                 material="transparent: true; opacity: 1; alphaTest: 0.5;">
+        </a-plane>
+      </a-entity>
+      <a-entity 
+        id="model-a"
+        gltf-model="url(boombox.glb)" 
+        scale="1.5 1.5 1.5" 
+        position="0 0 0"
+        rotation="-90 0 0">
       </a-entity>
     </a-entity>
 
     <!-- ▼ B面のコンテンツ -->
     <a-entity id="content-b" visible="false" follow-marker="#marker-b">
-      <!-- ★修正：ラジカセと歌詞カードを「まとめて」90度起き上がらせる -->
-      <a-entity rotation="-90 0 0">
-        
-        <!-- 歌詞カード（ラジカセの少し上、少し奥） -->
-        <a-entity position="0 1.2 -0.5" scale="2 0.5 1">
-          <a-plane color="#FDF5E6" material="shader: flat;" position="0 0 0"></a-plane>
-          <a-plane id="ar-text-b"
-                   canvas-text="value: これからもよろしく！; color: #333333;" 
-                   position="0 0 0.05" 
-                   material="transparent: true; opacity: 1; alphaTest: 0.5;">
-          </a-plane>
-        </a-entity>
-        
-        <!-- ラジカセ -->
-        <a-entity 
-          id="model-b"
-          gltf-model="url(boombox.glb)" 
-          scale="1.5 1.5 1.5" 
-          position="0 0 0">
-        </a-entity>
-
+      <a-entity position="0 1.2 -0.5" rotation="-90 0 0" scale="2 0.5 1">
+        <a-plane color="#FDF5E6" material="shader: flat; side: double;" position="0 0 0"></a-plane>
+        <a-plane id="ar-text-b"
+                 canvas-text="value: これからもよろしく！; color: #333333;" 
+                 position="0 0 0.05" 
+                 material="transparent: true; opacity: 1; alphaTest: 0.5;">
+        </a-plane>
+      </a-entity>
+      <a-entity 
+        id="model-b"
+        gltf-model="url(boombox.glb)" 
+        scale="1.5 1.5 1.5" 
+        position="0 0 0"
+        rotation="-90 0 0">
       </a-entity>
     </a-entity>
 
@@ -289,14 +274,13 @@
     const contentA = document.getElementById('content-a');
     const contentB = document.getElementById('content-b');
     
-    const allMusics = [document.getElementById('music1'), document.getElementById('music2'), document.getElementById('music3')];
+    const allMusics = [document.getElementById('music1'), document.getElementById('music2')];
 
     let currentMusicIdA = 'music1';
     let currentMusicIdB = 'music2';
     let activeAudio = null; 
     let isAudioUnlocked = false;
 
-    // 確実なロック解除処理
     startBtn.addEventListener('click', () => {
       startOverlay.style.display = 'none'; 
       editBtn.style.display = 'flex'; 
@@ -328,36 +312,44 @@
       settingsModal.classList.remove('active'); 
     });
 
+    function playTargetMusic(musicId) {
+      const newAudio = document.getElementById(musicId);
+      if (!newAudio) return;
+      if (activeAudio && activeAudio !== newAudio) {
+        activeAudio.pause();
+        activeAudio.currentTime = 0;
+      }
+      activeAudio = newAudio;
+      activeAudio.play().catch(e => console.log("再生エラー:", e));
+    }
+
     let lostTimeout = null;
 
     markerA.addEventListener('markerFound', () => {
       if(lostTimeout) clearTimeout(lostTimeout); 
+      contentA.setAttribute('visible', true);
       contentB.setAttribute('visible', false);
+      playTargetMusic(currentMusicIdA);
+    });
 
-      const newAudio = document.getElementById(currentMusicIdA);
-      if(activeAudio !== newAudio) {
-        if(activeAudio) activeAudio.pause();
-        activeAudio = newAudio;
-        if(activeAudio) {
-          activeAudio.currentTime = 0;
-          activeAudio.play().catch(e=>console.log("再生エラー:", e));
-        }
-      }
+    // オマケ：マーカーを見失ってから2秒後に音楽を一時停止する機能
+    markerA.addEventListener('markerLost', () => {
+      lostTimeout = setTimeout(() => {
+        if (activeAudio) activeAudio.pause();
+      }, 2000);
     });
 
     markerB.addEventListener('markerFound', () => {
       if(lostTimeout) clearTimeout(lostTimeout); 
+      contentB.setAttribute('visible', true);
       contentA.setAttribute('visible', false);
+      playTargetMusic(currentMusicIdB);
+    });
 
-      const newAudio = document.getElementById(currentMusicIdB);
-      if(activeAudio !== newAudio) {
-        if(activeAudio) activeAudio.pause();
-        activeAudio = newAudio;
-        if(activeAudio) {
-          activeAudio.currentTime = 0;
-          activeAudio.play().catch(e=>console.log("再生エラー:", e));
-        }
-      }
+    markerB.addEventListener('markerLost', () => {
+      lostTimeout = setTimeout(() => {
+        if (activeAudio) activeAudio.pause();
+      }, 2000);
     });
   </script>
 </body>

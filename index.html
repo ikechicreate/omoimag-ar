@@ -7,9 +7,9 @@
   
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-  <script src="https://raw.githack.com/fcor/arjs-gestures/master/dist/gestures.js"></script>
   
   <script>
+    // ▼ テキスト描画用のコンポーネント（変更なし）
     AFRAME.registerComponent('canvas-text', {
       schema: {
         value: { type: 'string', default: 'いつもありがとう。' },
@@ -59,6 +59,7 @@
       }
     });
 
+    // ▼ マーカーを外しても画像を留める機能（変更なし）
     AFRAME.registerComponent('follow-marker', {
       schema: { type: 'selector' },
       tick: function () {
@@ -73,6 +74,69 @@
             this.el.setAttribute('visible', true);
           }
         }
+      }
+    });
+
+    // ★新規追加：指で3Dモデルを回転・拡大縮小するための安全な専用コード
+    AFRAME.registerComponent('scene-gestures', {
+      init: function () {
+        this.isDragging = false;
+        this.prevX = 0;
+        this.prevDist = 0;
+        
+        const scene = this.el.sceneEl;
+        
+        scene.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) {
+            this.isDragging = true;
+            this.prevX = e.touches[0].screenX;
+          } else if (e.touches.length === 2) {
+            this.isDragging = false;
+            this.prevDist = Math.hypot(
+              e.touches[0].screenX - e.touches[1].screenX,
+              e.touches[0].screenY - e.touches[1].screenY
+            );
+          }
+        });
+        
+        scene.addEventListener('touchmove', (e) => {
+          const contentA = document.getElementById('content-a');
+          const contentB = document.getElementById('content-b');
+          let activeModel = null;
+          
+          // 表示されている方のラジカセを操作対象にする
+          if (contentA && contentA.getAttribute('visible')) {
+            activeModel = document.getElementById('model-a');
+          } else if (contentB && contentB.getAttribute('visible')) {
+            activeModel = document.getElementById('model-b');
+          }
+          
+          if (!activeModel) return;
+
+          // 1本指でスワイプ＝回転
+          if (e.touches.length === 1 && this.isDragging) {
+            let deltaX = e.touches[0].screenX - this.prevX;
+            activeModel.object3D.rotation.z -= deltaX * 0.015; 
+            this.prevX = e.touches[0].screenX;
+          } 
+          // 2本指でピンチ＝拡大縮小
+          else if (e.touches.length === 2) {
+            let dist = Math.hypot(
+              e.touches[0].screenX - e.touches[1].screenX,
+              e.touches[0].screenY - e.touches[1].screenY
+            );
+            let delta = dist - this.prevDist;
+            let scale = activeModel.object3D.scale.x + delta * 0.01;
+            scale = Math.max(0.5, Math.min(scale, 5)); // 大きさの制限
+            activeModel.object3D.scale.set(scale, scale, scale);
+            this.prevDist = dist;
+          }
+        });
+        
+        scene.addEventListener('touchend', (e) => {
+          if (e.touches.length < 2) this.prevDist = 0;
+          if (e.touches.length === 0) this.isDragging = false;
+        });
       }
     });
   </script>
@@ -173,12 +237,11 @@
     <button id="save-btn">保存してARを更新</button>
   </div>
 
+  <!-- ★ scene-gestures を追加してタッチ操作を有効化 -->
   <a-scene 
     embedded
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
-    gesture-detector
-    cursor="rayOrigin: mouse"
-    raycaster="objects: .clickable">
+    scene-gestures>
     
     <a-assets>
       <audio id="music1" src="music1.mp3" preload="auto"></audio>
@@ -186,9 +249,10 @@
       <audio id="music3" src="music3.mp3" preload="auto"></audio>
     </a-assets>
 
-    <a-marker preset="hiro" id="marker-a" emitevents="true"></a-marker>
-    <a-marker preset="kanji" id="marker-b" emitevents="true"></a-marker>
+    <a-marker preset="hiro" id="marker-a"></a-marker>
+    <a-marker preset="kanji" id="marker-b"></a-marker>
 
+    <!-- ▼ A面のコンテンツ -->
     <a-entity id="content-a" visible="false" follow-marker="#marker-a">
       <a-entity position="0 0.8 -0.5" rotation="-90 0 0" scale="2 0.5 1">
         <a-plane color="#FDF5E6" material="shader: flat;" position="0 0 0"></a-plane>
@@ -199,15 +263,15 @@
         </a-plane>
       </a-entity>
       <a-entity 
+        id="model-a"
         gltf-model="url(boombox.glb)" 
         scale="1.5 1.5 1.5" 
         position="0 0 0"
-        rotation="-90 0 0"
-        class="clickable"
-        gesture-handler="minScale: 0.5; maxScale: 5">
+        rotation="-90 0 0">
       </a-entity>
     </a-entity>
 
+    <!-- ▼ B面のコンテンツ -->
     <a-entity id="content-b" visible="false" follow-marker="#marker-b">
       <a-entity position="0 0.8 -0.5" rotation="-90 0 0" scale="2 0.5 1">
         <a-plane color="#FDF5E6" material="shader: flat;" position="0 0 0"></a-plane>
@@ -218,12 +282,11 @@
         </a-plane>
       </a-entity>
       <a-entity 
+        id="model-b"
         gltf-model="url(boombox.glb)" 
         scale="1.5 1.5 1.5" 
         position="0 0 0"
-        rotation="-90 0 0"
-        class="clickable"
-        gesture-handler="minScale: 0.5; maxScale: 5">
+        rotation="-90 0 0">
       </a-entity>
     </a-entity>
 
@@ -255,21 +318,30 @@
     let currentMusicIdA = 'music1';
     let currentMusicIdB = 'music2';
     let activeAudio = null; 
+    let isAudioUnlocked = false;
 
+    // ★修正：無音で再生してロックを解除し、勝手に鳴らないようにする
     startBtn.addEventListener('click', () => {
       startOverlay.style.display = 'none'; 
       editBtn.style.display = 'flex'; 
 
-      allMusics.forEach(audio => {
-        if(audio) {
-          audio.muted = true; // ★追加：最初は完全に無音にする
-          audio.play().then(() => {
-            audio.pause();
-            audio.currentTime = 0;
-            audio.muted = false; // ★追加：すぐにミュートを解除
-          }).catch(e => console.log("音声ロック解除エラー:", e));
-        }
-      });
+      if (!isAudioUnlocked) {
+        allMusics.forEach(audio => {
+          if(audio) {
+            audio.muted = true; 
+            const p = audio.play();
+            if (p !== undefined) {
+              p.then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+                // 完全に停止してからミュートを解除
+                setTimeout(() => { audio.muted = false; }, 50);
+              }).catch(e => console.log("Unlock Error:", e));
+            }
+          }
+        });
+        isAudioUnlocked = true;
+      }
     });
 
     editBtn.addEventListener('click', () => settingsModal.classList.add('active'));

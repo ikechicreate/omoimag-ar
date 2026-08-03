@@ -75,7 +75,6 @@
       }
     });
 
-    // 指で3Dモデルを回転・拡大縮小する機能
     AFRAME.registerComponent('scene-gestures', {
       init: function () {
         this.isDragging = false;
@@ -112,7 +111,7 @@
 
           if (e.touches.length === 1 && this.isDragging) {
             let deltaX = e.touches[0].screenX - this.prevX;
-            activeModel.object3D.rotation.z -= deltaX * 0.015; 
+            activeModel.object3D.rotation.y -= deltaX * 0.015; 
             this.prevX = e.touches[0].screenX;
           } 
           else if (e.touches.length === 2) {
@@ -217,41 +216,53 @@
 
     <!-- ▼ A面のコンテンツ -->
     <a-entity id="content-a" visible="false" follow-marker="#marker-a">
-      <!-- 修正：歌詞カードをラジカセの後ろ(-1.5)に、看板のように立てて配置 -->
-      <a-entity position="0 1.5 -1.5" scale="2 0.5 1">
-        <a-plane color="#FDF5E6" material="shader: flat;" position="0 0 0"></a-plane>
-        <a-plane id="ar-text-a"
-                 canvas-text="value: いつもありがとう。; color: #333333;" 
-                 position="0 0 0.02" 
-                 material="transparent: true; opacity: 1; alphaTest: 0.5;">
-        </a-plane>
-      </a-entity>
-      <a-entity 
-        id="model-a"
-        gltf-model="url(boombox.glb)" 
-        scale="1.5 1.5 1.5" 
-        position="0 0 0"
-        rotation="-90 0 0">
+      <!-- ★修正：ラジカセと歌詞カードを「まとめて」90度起き上がらせる -->
+      <a-entity rotation="-90 0 0">
+        
+        <!-- 歌詞カード（ラジカセの少し上、少し奥） -->
+        <a-entity position="0 1.2 -0.5" scale="2 0.5 1">
+          <a-plane color="#FDF5E6" material="shader: flat;" position="0 0 0"></a-plane>
+          <a-plane id="ar-text-a"
+                   canvas-text="value: いつもありがとう。; color: #333333;" 
+                   position="0 0 0.05" 
+                   material="transparent: true; opacity: 1; alphaTest: 0.5;">
+          </a-plane>
+        </a-entity>
+        
+        <!-- ラジカセ -->
+        <a-entity 
+          id="model-a"
+          gltf-model="url(boombox.glb)" 
+          scale="1.5 1.5 1.5" 
+          position="0 0 0">
+        </a-entity>
+
       </a-entity>
     </a-entity>
 
     <!-- ▼ B面のコンテンツ -->
     <a-entity id="content-b" visible="false" follow-marker="#marker-b">
-      <!-- 修正：歌詞カードをラジカセの後ろ(-1.5)に、看板のように立てて配置 -->
-      <a-entity position="0 1.5 -1.5" scale="2 0.5 1">
-        <a-plane color="#FDF5E6" material="shader: flat;" position="0 0 0"></a-plane>
-        <a-plane id="ar-text-b"
-                 canvas-text="value: これからもよろしく！; color: #333333;" 
-                 position="0 0 0.02" 
-                 material="transparent: true; opacity: 1; alphaTest: 0.5;">
-        </a-plane>
-      </a-entity>
-      <a-entity 
-        id="model-b"
-        gltf-model="url(boombox.glb)" 
-        scale="1.5 1.5 1.5" 
-        position="0 0 0"
-        rotation="-90 0 0">
+      <!-- ★修正：ラジカセと歌詞カードを「まとめて」90度起き上がらせる -->
+      <a-entity rotation="-90 0 0">
+        
+        <!-- 歌詞カード（ラジカセの少し上、少し奥） -->
+        <a-entity position="0 1.2 -0.5" scale="2 0.5 1">
+          <a-plane color="#FDF5E6" material="shader: flat;" position="0 0 0"></a-plane>
+          <a-plane id="ar-text-b"
+                   canvas-text="value: これからもよろしく！; color: #333333;" 
+                   position="0 0 0.05" 
+                   material="transparent: true; opacity: 1; alphaTest: 0.5;">
+          </a-plane>
+        </a-entity>
+        
+        <!-- ラジカセ -->
+        <a-entity 
+          id="model-b"
+          gltf-model="url(boombox.glb)" 
+          scale="1.5 1.5 1.5" 
+          position="0 0 0">
+        </a-entity>
+
       </a-entity>
     </a-entity>
 
@@ -285,7 +296,7 @@
     let activeAudio = null; 
     let isAudioUnlocked = false;
 
-    // 修正：一瞬だけ再生して即座に止める（音漏れ防止＆確実なロック解除）
+    // 確実なロック解除処理
     startBtn.addEventListener('click', () => {
       startOverlay.style.display = 'none'; 
       editBtn.style.display = 'flex'; 
@@ -293,9 +304,13 @@
       if (!isAudioUnlocked) {
         allMusics.forEach(audio => {
           if(audio) {
-            audio.play().catch(()=>{});
-            audio.pause();
-            audio.currentTime = 0;
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+              playPromise.then(_ => {
+                audio.pause();
+                audio.currentTime = 0;
+              }).catch(e => console.log(e));
+            }
           }
         });
         isAudioUnlocked = true;

@@ -56,6 +56,21 @@
     #start-btn { padding: 15px 40px; font-size: 20px; font-weight: bold; background: #FF8C00; color: white; border: none; border-radius: 30px; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 10px rgba(255, 140, 0, 0.4); }
     #edit-btn { position: absolute; top: 20px; right: 20px; z-index: 1000; width: 50px; height: 50px; border-radius: 50%; background: white; border: none; font-size: 24px; cursor: pointer; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3); justify-content: center; align-items: center; }
     
+    /* ★追加：スマホが縦向きの時に「画面を横に回転してください」と促す案内表示 */
+    #orientation-warning {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.9); z-index: 9998;
+      display: none; flex-direction: column; justify-content: center; align-items: center;
+      color: white; font-size: 18px; font-weight: bold; text-align: center; padding: 20px; box-sizing: border-box;
+    }
+    #orientation-warning .icon { font-size: 50px; margin-bottom: 15px; animation: rotate-icon 2s infinite ease-in-out; }
+    @keyframes rotate-icon { 0% { transform: rotate(0deg); } 50% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
+    
+    /* 縦画面（Portrait）の時だけ案内を表示するCSSルール */
+    @media screen and (orientation: portrait) {
+      #orientation-warning { display: flex; }
+    }
+
     #settings-modal { position: absolute; bottom: -100%; left: 0; width: 100%; height: 80vh; overflow-y: auto; background: white; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; box-sizing: border-box; z-index: 2000; transition: bottom 0.3s ease-in-out; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); }
     #settings-modal.active { bottom: 0; }
     .setting-section { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #4B7B9E; }
@@ -79,6 +94,12 @@
   </style>
 </head>
 <body>
+
+  <!-- 横画面回転を促す案内画面 -->
+  <div id="orientation-warning">
+    <div class="icon">📱🔄</div>
+    <div>画面を横向きにしてお楽しみください</div>
+  </div>
 
   <div id="status-display">マーカーを認識しました！</div>
 
@@ -115,7 +136,6 @@
       </div>
 
       <div class="form-group">
-        <!-- ★修正：BGM専用の選択肢に変更しました -->
         <label>後ろで流すBGMを選択</label>
         <select id="select-music-a">
           <option value="none" selected>BGMなし（音声のみ）</option>
@@ -142,10 +162,17 @@
     <button id="save-btn">保存してARを更新</button>
   </div>
 
+  <!-- ★修正：renderer設定を追加し、スマホでの奥行き描画エラーを防止 -->
   <a-scene 
     embedded
+    renderer="logarithmicDepthBuffer: true; colorManagement: true;"
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
     
+    <!-- ★修正：スマホで確実にクマさんを読み込むため、事前ロード（a-assets）を追加 -->
+    <a-assets>
+      <a-asset-item id="bear-model" src="models/bear.glb"></a-asset-item>
+    </a-assets>
+
     <a-light type="ambient" color="#ffffff" intensity="0.7"></a-light>
     <a-light type="directional" color="#ffffff" intensity="0.8" position="-1 2 1"></a-light>
 
@@ -166,9 +193,10 @@
           <a-plane id="ar-text-a" canvas-text="value: いつもありがとう。; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
         </a-entity>
         
+        <!-- ★修正：gltf-model="#bear-model" としてアセットから読み込み -->
         <a-entity 
           id="model-a"
-          gltf-model="url(models/bear.glb)" 
+          gltf-model="#bear-model" 
           scale="0.4 0.4 0.4" 
           position="-1.5 -1.5 -5"
           rotation="0 0 0">
@@ -184,7 +212,7 @@
         
         <a-entity 
           id="model-b"
-          gltf-model="url(models/bear.glb)" 
+          gltf-model="#bear-model" 
           scale="0.4 0.4 0.4" 
           position="-1.5 -1.5 -5"
           rotation="0 0 0">
@@ -285,7 +313,6 @@
       }
     });
 
-    // ★BGMと音声を分けて管理できるように変更
     let currentBgmIdA = 'none'; 
     let currentBgmIdB = 'music2';
     let activeBGM = null; 
@@ -296,6 +323,11 @@
       startOverlay.style.display = 'none'; 
       editBtn.style.display = 'flex'; 
       
+      // ★追加：Android等で可能であれば横画面に画面固定する
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(e => console.log(e));
+      }
+
       if (!isAudioUnlocked) {
         const allMusics = [document.getElementById('music1'), document.getElementById('music2'), document.getElementById('recorded-audio-a')];
         allMusics.forEach(audio => {
@@ -322,9 +354,7 @@
       settingsModal.classList.remove('active'); 
     });
 
-    // ★大進化：BGMと音声を同時に鳴らすハイブリッド再生機能
     function playTargetMusic(bgmId, voiceId, uiElement, paperElement) {
-      // 以前の曲・声が鳴っていればストップ
       if (activeBGM) { activeBGM.pause(); activeBGM.currentTime = 0; activeBGM.onended = null; }
       if (activeVoice) { activeVoice.pause(); activeVoice.currentTime = 0; activeVoice.onended = null; }
       
@@ -334,23 +364,19 @@
       let hasBgm = activeBGM && activeBGM.src && activeBGM.src !== window.location.href;
       let hasVoice = activeVoice && activeVoice.src && activeVoice.src !== window.location.href;
 
-      if (!hasBgm && !hasVoice) return; // どちらもない場合は何もしない
+      if (!hasBgm && !hasVoice) return; 
 
-      // 音声を再生
       if (hasVoice) {
         activeVoice.currentTime = 0;
         activeVoice.play().catch(e => console.warn("音声再生ブロック:", e));
       }
 
-      // BGMを再生
       if (hasBgm) {
         activeBGM.currentTime = 0;
-        // ★プロの技：声が入っている時はBGMのボリュームを30%に下げて声を聞きやすくする
         activeBGM.volume = hasVoice ? 0.3 : 1.0; 
         activeBGM.play().catch(e => console.warn("BGM再生ブロック:", e));
       }
 
-      // どちらの曲（声）が終わった時にクマさんを消すかを決める
       let longestAudio = hasBgm ? activeBGM : activeVoice; 
       
       if (longestAudio) {
@@ -385,7 +411,6 @@
       
       actionTimeout = setTimeout(() => {
         paperA.setAttribute('scale', '1 1 1'); 
-        // ★変更：BGMと録音音声の両方を渡して同時再生！
         playTargetMusic(currentBgmIdA, 'recorded-audio-a', uiA, paperA); 
       }, DELAY_TIME_MS);
     });
@@ -416,7 +441,6 @@
       
       actionTimeout = setTimeout(() => {
         paperB.setAttribute('scale', '1 1 1');
-        // B面は録音音声を使わないので、nullを渡します
         playTargetMusic(currentBgmIdB, null, uiB, paperB); 
       }, DELAY_TIME_MS);
     });

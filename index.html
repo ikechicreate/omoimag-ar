@@ -48,27 +48,42 @@
         this.texture.needsUpdate = true;
       }
     });
+
+    AFRAME.registerComponent('stop-playback', {
+      schema: { side: { type: 'string' } },
+      init: function () {
+        this.el.addEventListener('click', () => {
+          if (activeVoice) {
+            activeVoice.pause();
+            activeVoice.currentTime = 0;
+            activeVoice.onended = null; 
+          }
+          if (activeBGM) {
+            activeBGM.pause();
+            activeBGM.currentTime = 0;
+            activeBGM.onended = null; 
+          }
+
+          if (this.data.side === 'a') {
+            paperA.setAttribute('scale', '0 0 0');
+            uiA.setAttribute('visible', false);
+          } else {
+            paperB.setAttribute('scale', '0 0 0');
+            uiB.setAttribute('visible', false);
+          }
+        });
+      }
+    });
   </script>
 
   <style>
-    body { margin: 0; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #000; }
+    /* ★修正：背景を黒にする（background-color: #000;）を削除し、カメラが透けて見えるようにしました */
+    body { margin: 0; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; }
+    
     #start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 20px; box-sizing: border-box; }
     #start-btn { padding: 15px 40px; font-size: 20px; font-weight: bold; background: #FF8C00; color: white; border: none; border-radius: 30px; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 10px rgba(255, 140, 0, 0.4); }
     #edit-btn { position: absolute; top: 20px; right: 20px; z-index: 1000; width: 50px; height: 50px; border-radius: 50%; background: white; border: none; font-size: 24px; cursor: pointer; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3); justify-content: center; align-items: center; }
     
-    #orientation-warning {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(30, 30, 30, 0.95); z-index: 9998;
-      display: none; flex-direction: column; justify-content: center; align-items: center;
-      color: white; font-size: 18px; font-weight: bold; text-align: center; padding: 20px; box-sizing: border-box;
-    }
-    #orientation-warning .icon { font-size: 50px; margin-bottom: 15px; animation: rotate-icon 2s infinite ease-in-out; }
-    @keyframes rotate-icon { 0% { transform: rotate(0deg); } 50% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
-    
-    @media screen and (orientation: portrait) {
-      #orientation-warning { display: flex; }
-    }
-
     #settings-modal { position: absolute; bottom: -100%; left: 0; width: 100%; height: 80vh; overflow-y: auto; background: white; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; box-sizing: border-box; z-index: 2000; transition: bottom 0.3s ease-in-out; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); }
     #settings-modal.active { bottom: 0; }
     .setting-section { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #4B7B9E; }
@@ -93,22 +108,16 @@
 </head>
 <body>
 
-  <div id="orientation-warning">
-    <div class="icon">📱🔄</div>
-    <div>画面を横向きにしてお楽しみください</div>
-  </div>
-
   <div id="status-display">マーカーを認識しました！</div>
 
   <audio id="music1" src="music/music1.mp3" preload="auto" style="display: none;"></audio>
   <audio id="music2" src="music/music2.mp3" preload="auto" style="display: none;"></audio>
   <audio id="recorded-audio-a" preload="auto" style="display: none;"></audio>
 
+  <!-- ★修正：横向きのお願いを削除し、シンプルで親切なメッセージに戻しました -->
   <div id="start-overlay">
     <h2>想いマグ - OMOI-MAG AR</h2>
-    <p style="margin-bottom: 5px;">⚠️ スマホの「画面の向きロック」を解除し</p>
-    <p style="font-size: 22px; font-weight: bold; color: #FFD700; margin-top: 0; margin-bottom: 20px;">【横向き】に持ち替えてから<br>スタートしてください。</p>
-    <p style="font-size: 14px; color: #ddd;">※カメラを許可し、マナーモードを解除してください</p>
+    <p style="font-size: 16px; margin-bottom: 20px;">カメラを許可し、マナーモードを<br>解除してお楽しみください</p>
     <button id="start-btn">スタート</button>
   </div>
 
@@ -122,7 +131,6 @@
       <h4>A面の設定</h4>
       <div class="form-group">
         <label>メッセージ (15文字まで)</label>
-        <!-- スマホでは手動入力をお願いするため、プレースホルダーで案内を入れています -->
         <input type="text" id="input-msg-a" value="いつもありがとう。" maxlength="15" placeholder="ここにメッセージを入力">
       </div>
       
@@ -162,7 +170,6 @@
     <button id="save-btn">保存してARを更新</button>
   </div>
 
-  <!-- ★大修正：フリーズの原因だった「renderer="logarithmicDepthBuffer: true"」を削除しました！ -->
   <a-scene 
     embedded
     renderer="colorManagement: true;"
@@ -208,7 +215,8 @@
           geometry="primitive: circle; radius: 0.3" 
           material="color: #FF0000; shader: flat; side: double; transparent: true; opacity: 0.8" 
           text="value: STOP; color: #FFFFFF; align: center; wrapCount: 12; zOffset: 0.01" 
-          position="-2 1 -5">
+          position="-2 1 -5" 
+          stop-playback="side: a">
         </a-entity>
       </a-entity>
 
@@ -233,7 +241,8 @@
           geometry="primitive: circle; radius: 0.3" 
           material="color: #FF0000; shader: flat; side: double; transparent: true; opacity: 0.8" 
           text="value: STOP; color: #FFFFFF; align: center; wrapCount: 12; zOffset: 0.01" 
-          position="-2 1 -5">
+          position="-2 1 -5" 
+          stop-playback="side: b">
         </a-entity>
       </a-entity>
       
@@ -341,10 +350,7 @@
       startOverlay.style.display = 'none'; 
       editBtn.style.display = 'flex'; 
       
-      if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock('landscape').catch(e => console.log(e));
-      }
-
+      // ★修正：スマホで強制ロックする機能を削除（ブラウザと喧嘩するため）
       if (!isAudioUnlocked) {
         const allMusics = [document.getElementById('music1'), document.getElementById('music2'), document.getElementById('recorded-audio-a')];
         allMusics.forEach(audio => {

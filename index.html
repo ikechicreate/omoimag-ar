@@ -79,7 +79,7 @@
     
     #status-display { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(75, 123, 158, 0.9); color: white; padding: 12px 24px; border-radius: 30px; font-weight: bold; font-size: 16px; z-index: 1000; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
-    /* ★完全リニューアル：確実に押せる最強の2Dストップボタン */
+    /* ★確実に押せて、音楽も止まる最強の2Dストップボタン */
     #universal-stop-btn {
       position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
       width: 80px; height: 80px; background-color: #E74C3C; color: white; border-radius: 50%;
@@ -93,7 +93,7 @@
 
   <div id="status-display">マーカーを認識しました！</div>
   
-  <!-- ★追加：絶対に押せる2Dストップボタン -->
+  <!-- ★絶対に押せる2Dストップボタン -->
   <div id="universal-stop-btn">STOP</div>
 
   <audio id="music1" src="music/music1.mp3" preload="auto" style="display: none;"></audio>
@@ -155,18 +155,16 @@
     <button id="save-btn">保存してARを更新</button>
   </div>
 
+  <!-- ★修正：フリーズを防ぐため a-assets ブロックを完全削除しました！ -->
   <a-scene 
     embedded
     renderer="alpha: true; colorManagement: true;"
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+    cursor="rayOrigin: mouse"
+    raycaster="objects: .clickable"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
     
-    <!-- ★修正：確実にクマさんを読み込むための設定復活 -->
-    <a-assets timeout="10000">
-      <a-asset-item id="bear-model" src="models/bear.glb"></a-asset-item>
-    </a-assets>
-
     <a-light type="ambient" color="#ffffff" intensity="0.7"></a-light>
     <a-light type="directional" color="#ffffff" intensity="0.8" position="-1 2 1"></a-light>
 
@@ -182,34 +180,34 @@
       
       <!-- ▼ A面のコンテンツ（スマホの縦画面に完全フィット！） -->
       <a-entity id="ui-a" visible="false">
-        <a-entity id="paper-a" scale="0 0 0" position="0 1.0 -5" rotation="0 0 0">
+        <a-entity id="paper-a" scale="0 0 0" position="0 0.8 -5" rotation="0 0 0">
           <a-plane color="#FDF5E6" material="shader: flat; side: double;" position="0 0 0" scale="2 0.5 1"></a-plane>
           <a-plane id="ar-text-a" canvas-text="value: いつもありがとう。; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
         </a-entity>
         
-        <!-- ★修正：クマさんを少し上に引き上げ、確実に表示させます -->
+        <!-- ★修正：gltf-modelを直接URL指定に戻し、位置を中央(0 0 -5)に最適化しました -->
         <a-entity 
           id="model-a"
-          gltf-model="#bear-model" 
-          scale="0.35 0.35 0.35" 
-          position="0 -0.5 -5"
+          gltf-model="url(models/bear.glb)" 
+          scale="0.25 0.25 0.25" 
+          position="0 0 -5"
           rotation="0 0 0">
         </a-entity>
       </a-entity>
 
       <!-- ▼ B面のコンテンツ（スマホの縦画面に完全フィット！） -->
       <a-entity id="ui-b" visible="false">
-        <a-entity id="paper-b" scale="0 0 0" position="0 1.0 -5" rotation="0 0 0">
+        <a-entity id="paper-b" scale="0 0 0" position="0 0.8 -5" rotation="0 0 0">
           <a-plane color="#FDF5E6" material="shader: flat; side: double;" position="0 0 0" scale="2 0.5 1"></a-plane>
           <a-plane id="ar-text-b" canvas-text="value: これからもよろしく！; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
         </a-entity>
         
-        <!-- ★修正：クマさんを少し上に引き上げ、確実に表示させます -->
+        <!-- ★修正：gltf-modelを直接URL指定に戻し、位置を中央(0 0 -5)に最適化しました -->
         <a-entity 
           id="model-b"
-          gltf-model="#bear-model" 
-          scale="0.35 0.35 0.35" 
-          position="0 -0.5 -5"
+          gltf-model="url(models/bear.glb)" 
+          scale="0.25 0.25 0.25" 
+          position="0 0 -5"
           rotation="0 0 0">
         </a-entity>
       </a-entity>

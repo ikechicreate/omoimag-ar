@@ -48,35 +48,6 @@
         this.texture.needsUpdate = true;
       }
     });
-
-    // ★新機能：停止ボタンのコンポーネント
-    AFRAME.registerComponent('stop-playback', {
-      schema: { side: { type: 'string' } },
-      init: function () {
-        this.el.addEventListener('click', () => {
-          // 再生中の音声があれば停止し、衝突防止の安全装置をかける
-          if (activeVoice) {
-            activeVoice.pause();
-            activeVoice.currentTime = 0;
-            activeVoice.onended = null; 
-          }
-          if (activeBGM) {
-            activeBGM.pause();
-            activeBGM.currentTime = 0;
-            activeBGM.onended = null; 
-          }
-
-          // コンテンツを非表示にする
-          if (this.data.side === 'a') {
-            paperA.setAttribute('scale', '0 0 0');
-            uiA.setAttribute('visible', false);
-          } else {
-            paperB.setAttribute('scale', '0 0 0');
-            uiB.setAttribute('visible', false);
-          }
-        });
-      }
-    });
   </script>
 
   <style>
@@ -165,7 +136,6 @@
         <label>後ろで流すBGMを選択</label>
         <select id="select-music-a">
           <option value="none">BGMなし（音声のみ）</option>
-          <!-- ★修正：ここをselectedにして初期状態を「曲1」にしました -->
           <option value="music1" selected>曲1 (music1.mp3)</option>
           <option value="music2">曲2 (music2.mp3)</option>
         </select>
@@ -189,10 +159,13 @@
     <button id="save-btn">保存してARを更新</button>
   </div>
 
+  <!-- ★大修正：指で直接タップできるように「cursor="rayOrigin: mouse"」を追加しました -->
   <a-scene 
     embedded
     renderer="logarithmicDepthBuffer: true; colorManagement: true;"
-    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
+    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+    cursor="rayOrigin: mouse"
+    raycaster="objects: .clickable">
     
     <a-assets>
       <a-asset-item id="bear-model" src="models/bear.glb"></a-asset-item>
@@ -210,9 +183,7 @@
     </a-marker>
 
     <a-entity camera>
-      <!-- ★追加：カメラにカーソル（オレンジ色の点）を追加。画面固定コンテンツをクリックできるように。 -->
-      <a-cursor color="#FF8C00" fuse="false" raycaster="objects: .clickable"></a-cursor>
-
+      
       <!-- ▼ A面のコンテンツ -->
       <a-entity id="ui-a" visible="false">
         <a-entity id="paper-a" scale="0 0 0" position="0.2 0 -5" rotation="0 0 0">
@@ -228,15 +199,14 @@
           rotation="0 0 0">
         </a-entity>
         
-        <!-- ★追加：停止ボタンエンティティ。クマの左上に配置。 -->
+        <!-- ★修正：押しやすいように少し大きく(radius: 0.3)しました -->
         <a-entity 
           id="stop-btn-a" 
           class="clickable" 
-          geometry="primitive: circle; radius: 0.2" 
+          geometry="primitive: circle; radius: 0.3" 
           material="color: #FF0000; shader: flat; side: double; transparent: true; opacity: 0.8" 
-          text="value: STOP; color: #FFFFFF; align: center; wrapCount: 10; zOffset: 0.01" 
-          position="-2 1 -5" 
-          stop-playback="side: a">
+          text="value: STOP; color: #FFFFFF; align: center; wrapCount: 12; zOffset: 0.01" 
+          position="-2 1 -5">
         </a-entity>
       </a-entity>
 
@@ -255,15 +225,14 @@
           rotation="0 0 0">
         </a-entity>
 
-        <!-- ★追加：停止ボタンエンティティ。クマの左上に配置。 -->
+        <!-- ★修正：押しやすいように少し大きく(radius: 0.3)しました -->
         <a-entity 
           id="stop-btn-b" 
           class="clickable" 
-          geometry="primitive: circle; radius: 0.2" 
+          geometry="primitive: circle; radius: 0.3" 
           material="color: #FF0000; shader: flat; side: double; transparent: true; opacity: 0.8" 
-          text="value: STOP; color: #FFFFFF; align: center; wrapCount: 10; zOffset: 0.01" 
-          position="-2 1 -5" 
-          stop-playback="side: b">
+          text="value: STOP; color: #FFFFFF; align: center; wrapCount: 12; zOffset: 0.01" 
+          position="-2 1 -5">
         </a-entity>
       </a-entity>
       
@@ -361,14 +330,12 @@
       }
     });
 
-    // ★修正：初期値をご指定通り 'music1' に変更しました
     let currentBgmIdA = 'music1'; 
     let currentBgmIdB = 'music2';
     let activeBGM = null; 
     let activeVoice = null;
     let isAudioUnlocked = false;
 
-    // スマホの自動再生ブロックを完全に解除する設定
     startBtn.addEventListener('click', () => {
       startOverlay.style.display = 'none'; 
       editBtn.style.display = 'flex'; 
@@ -381,15 +348,11 @@
         const allMusics = [document.getElementById('music1'), document.getElementById('music2'), document.getElementById('recorded-audio-a')];
         allMusics.forEach(audio => {
           if(audio) {
-            audio.muted = true; // ★修正
+            audio.load();
             audio.play().then(() => {
               audio.pause();
               audio.currentTime = 0;
-              audio.muted = false; // ★修正
-            }).catch(e => { // ★修正：エラーキャッチ
-              console.error("Audio unlock failed:", e);
-              audio.muted = false;
-            });
+            }).catch(() => {});
           }
         });
         isAudioUnlocked = true;
@@ -421,13 +384,13 @@
 
       if (hasVoice) {
         activeVoice.currentTime = 0;
-        activeVoice.play().catch(e => console.error("Voice play failed:", e)); // ★修正
+        activeVoice.play().catch(e => console.warn("音声再生ブロック:", e));
       }
 
       if (hasBgm) {
         activeBGM.currentTime = 0;
         activeBGM.volume = hasVoice ? 0.3 : 1.0; 
-        activeBGM.play().catch(e => console.error("BGM play failed:", e)); // ★修正
+        activeBGM.play().catch(e => console.warn("BGM再生ブロック:", e));
       }
 
       let longestAudio = hasBgm ? activeBGM : activeVoice; 
@@ -441,6 +404,29 @@
     }
 
     let actionTimeout = null;
+
+    // ★新機能：停止ボタンを押した時の強力なストップ処理
+    function stopAllMediaAndHide(side) {
+      // 1. カウントダウン中ならキャンセルする（安全装置）
+      if (actionTimeout) clearTimeout(actionTimeout);
+
+      // 2. 音声をピタッと止める
+      if (activeBGM) { activeBGM.pause(); activeBGM.currentTime = 0; activeBGM.onended = null; }
+      if (activeVoice) { activeVoice.pause(); activeVoice.currentTime = 0; activeVoice.onended = null; }
+      
+      // 3. コンテンツを隠す
+      if (side === 'a') {
+        paperA.setAttribute('scale', '0 0 0');
+        uiA.setAttribute('visible', false);
+      } else {
+        paperB.setAttribute('scale', '0 0 0');
+        uiB.setAttribute('visible', false);
+      }
+    }
+
+    // A面・B面のSTOPボタンにタップ機能を連携
+    document.getElementById('stop-btn-a').addEventListener('click', () => { stopAllMediaAndHide('a'); });
+    document.getElementById('stop-btn-b').addEventListener('click', () => { stopAllMediaAndHide('b'); });
 
     // ==========================================
     // A面マーカーを見つけた時の動作

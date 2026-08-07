@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>想いマグ - OMOI-MAG AR</title>
   
-  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <!-- ★大修正：スマホで最も安定してカメラが起動するバージョン(1.3.0)に変更しました！ -->
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
   
@@ -77,8 +78,7 @@
   </script>
 
   <style>
-    /* ★修正：背景を黒にする（background-color: #000;）を削除し、カメラが透けて見えるようにしました */
-    body { margin: 0; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; }
+    body { margin: 0; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: transparent; }
     
     #start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 20px; box-sizing: border-box; }
     #start-btn { padding: 15px 40px; font-size: 20px; font-weight: bold; background: #FF8C00; color: white; border: none; border-radius: 30px; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 10px rgba(255, 140, 0, 0.4); }
@@ -114,7 +114,6 @@
   <audio id="music2" src="music/music2.mp3" preload="auto" style="display: none;"></audio>
   <audio id="recorded-audio-a" preload="auto" style="display: none;"></audio>
 
-  <!-- ★修正：横向きのお願いを削除し、シンプルで親切なメッセージに戻しました -->
   <div id="start-overlay">
     <h2>想いマグ - OMOI-MAG AR</h2>
     <p style="font-size: 16px; margin-bottom: 20px;">カメラを許可し、マナーモードを<br>解除してお楽しみください</p>
@@ -170,9 +169,10 @@
     <button id="save-btn">保存してARを更新</button>
   </div>
 
+  <!-- ★大修正：alpha: true を追加し、背景のカーテンを完全に透明化しました！ -->
   <a-scene 
     embedded
-    renderer="colorManagement: true;"
+    renderer="alpha: true; colorManagement: true;"
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
     cursor="rayOrigin: mouse"
     raycaster="objects: .clickable">
@@ -280,6 +280,7 @@
     let mediaRecorder;
     let audioChunks = [];
     
+    // スマホ（iOS Safari）はSpeechRecognition非対応のため、手動入力を促します
     let recognition;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -350,7 +351,6 @@
       startOverlay.style.display = 'none'; 
       editBtn.style.display = 'flex'; 
       
-      // ★修正：スマホで強制ロックする機能を削除（ブラウザと喧嘩するため）
       if (!isAudioUnlocked) {
         const allMusics = [document.getElementById('music1'), document.getElementById('music2'), document.getElementById('recorded-audio-a')];
         allMusics.forEach(audio => {

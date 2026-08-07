@@ -191,60 +191,57 @@
 
     <a-entity camera>
       
-      <!-- ▼ A面のコンテンツ（縦画面・横画面 両対応レイアウト） -->
+      <!-- ▼ A面のコンテンツ（スマホの縦画面に完全フィット！） -->
       <a-entity id="ui-a" visible="false">
-        <!-- ★修正: メッセージを画面中央の上部 (Y軸: 1.2) に配置 -->
-        <a-entity id="paper-a" scale="0 0 0" position="0 1.2 -5" rotation="0 0 0">
+        <!-- メッセージを少し上に配置 -->
+        <a-entity id="paper-a" scale="0 0 0" position="0 0.8 -5" rotation="0 0 0">
           <a-plane color="#FDF5E6" material="shader: flat; side: double;" position="0 0 0" scale="2 0.5 1"></a-plane>
           <a-plane id="ar-text-a" canvas-text="value: いつもありがとう。; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
         </a-entity>
         
-        <!-- ★修正: クマさんを画面中央の少し下 (Y軸: -0.8) に配置 -->
+        <!-- クマさんを画面のど真ん中に配置（縦画面でもはみ出ないように少し小さめ） -->
         <a-entity 
           id="model-a"
           gltf-model="url(models/bear.glb)" 
-          scale="0.35 0.35 0.35" 
-          position="0 -0.8 -5"
+          scale="0.25 0.25 0.25" 
+          position="0 0 -5"
           rotation="0 0 0">
         </a-entity>
         
-        <!-- ★修正: STOPボタンを画面中央の一番下 (Y軸: -2.8) に配置。サイズも大きく押しやすく。 -->
+        <!-- STOPボタンをクマさんのすぐ足元に配置 -->
         <a-entity 
           id="stop-btn-a" 
           class="clickable" 
-          geometry="primitive: circle; radius: 0.35" 
+          geometry="primitive: circle; radius: 0.2" 
           material="color: #FF0000; shader: flat; side: double; transparent: true; opacity: 0.9" 
           text="value: STOP; color: #FFFFFF; align: center; wrapCount: 12; zOffset: 0.01" 
-          position="0 -2.8 -5" 
+          position="0 -0.9 -5" 
           stop-playback="side: a">
         </a-entity>
       </a-entity>
 
-      <!-- ▼ B面のコンテンツ（縦画面・横画面 両対応レイアウト） -->
+      <!-- ▼ B面のコンテンツ（スマホの縦画面に完全フィット！） -->
       <a-entity id="ui-b" visible="false">
-        <!-- ★修正: メッセージを画面中央の上部 (Y軸: 1.2) に配置 -->
-        <a-entity id="paper-b" scale="0 0 0" position="0 1.2 -5" rotation="0 0 0">
+        <a-entity id="paper-b" scale="0 0 0" position="0 0.8 -5" rotation="0 0 0">
           <a-plane color="#FDF5E6" material="shader: flat; side: double;" position="0 0 0" scale="2 0.5 1"></a-plane>
           <a-plane id="ar-text-b" canvas-text="value: これからもよろしく！; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
         </a-entity>
         
-        <!-- ★修正: クマさんを画面中央の少し下 (Y軸: -0.8) に配置 -->
         <a-entity 
           id="model-b"
           gltf-model="url(models/bear.glb)" 
-          scale="0.35 0.35 0.35" 
-          position="0 -0.8 -5"
+          scale="0.25 0.25 0.25" 
+          position="0 0 -5"
           rotation="0 0 0">
         </a-entity>
 
-        <!-- ★修正: STOPボタンを画面中央の一番下 (Y軸: -2.8) に配置。 -->
         <a-entity 
           id="stop-btn-b" 
           class="clickable" 
-          geometry="primitive: circle; radius: 0.35" 
+          geometry="primitive: circle; radius: 0.2" 
           material="color: #FF0000; shader: flat; side: double; transparent: true; opacity: 0.9" 
           text="value: STOP; color: #FFFFFF; align: center; wrapCount: 12; zOffset: 0.01" 
-          position="0 -2.8 -5" 
+          position="0 -0.9 -5" 
           stop-playback="side: b">
         </a-entity>
       </a-entity>

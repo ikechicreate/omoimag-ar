@@ -56,7 +56,6 @@
     #start-btn { padding: 15px 40px; font-size: 20px; font-weight: bold; background: #FF8C00; color: white; border: none; border-radius: 30px; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 10px rgba(255, 140, 0, 0.4); }
     #edit-btn { position: absolute; top: 20px; right: 20px; z-index: 1000; width: 50px; height: 50px; border-radius: 50%; background: white; border: none; font-size: 24px; cursor: pointer; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3); justify-content: center; align-items: center; }
     
-    /* ★追加：スマホが縦向きの時に「画面を横に回転してください」と促す案内表示 */
     #orientation-warning {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0, 0, 0, 0.9); z-index: 9998;
@@ -66,7 +65,6 @@
     #orientation-warning .icon { font-size: 50px; margin-bottom: 15px; animation: rotate-icon 2s infinite ease-in-out; }
     @keyframes rotate-icon { 0% { transform: rotate(0deg); } 50% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
     
-    /* 縦画面（Portrait）の時だけ案内を表示するCSSルール */
     @media screen and (orientation: portrait) {
       #orientation-warning { display: flex; }
     }
@@ -95,7 +93,6 @@
 </head>
 <body>
 
-  <!-- 横画面回転を促す案内画面 -->
   <div id="orientation-warning">
     <div class="icon">📱🔄</div>
     <div>画面を横向きにしてお楽しみください</div>
@@ -138,8 +135,9 @@
       <div class="form-group">
         <label>後ろで流すBGMを選択</label>
         <select id="select-music-a">
-          <option value="none" selected>BGMなし（音声のみ）</option>
-          <option value="music1">曲1 (music1.mp3)</option>
+          <option value="none">BGMなし（音声のみ）</option>
+          <!-- ★修正：ここをselectedにして初期状態を「曲1」にしました -->
+          <option value="music1" selected>曲1 (music1.mp3)</option>
           <option value="music2">曲2 (music2.mp3)</option>
         </select>
       </div>
@@ -162,13 +160,11 @@
     <button id="save-btn">保存してARを更新</button>
   </div>
 
-  <!-- ★修正：renderer設定を追加し、スマホでの奥行き描画エラーを防止 -->
   <a-scene 
     embedded
     renderer="logarithmicDepthBuffer: true; colorManagement: true;"
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
     
-    <!-- ★修正：スマホで確実にクマさんを読み込むため、事前ロード（a-assets）を追加 -->
     <a-assets>
       <a-asset-item id="bear-model" src="models/bear.glb"></a-asset-item>
     </a-assets>
@@ -193,7 +189,6 @@
           <a-plane id="ar-text-a" canvas-text="value: いつもありがとう。; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
         </a-entity>
         
-        <!-- ★修正：gltf-model="#bear-model" としてアセットから読み込み -->
         <a-entity 
           id="model-a"
           gltf-model="#bear-model" 
@@ -313,7 +308,8 @@
       }
     });
 
-    let currentBgmIdA = 'none'; 
+    // ★修正：初期値を 'none' から 'music1' に変更しました
+    let currentBgmIdA = 'music1'; 
     let currentBgmIdB = 'music2';
     let activeBGM = null; 
     let activeVoice = null;
@@ -323,7 +319,6 @@
       startOverlay.style.display = 'none'; 
       editBtn.style.display = 'flex'; 
       
-      // ★追加：Android等で可能であれば横画面に画面固定する
       if (screen.orientation && screen.orientation.lock) {
         screen.orientation.lock('landscape').catch(e => console.log(e));
       }
@@ -389,9 +384,6 @@
 
     let actionTimeout = null;
 
-    // ==========================================
-    // A面マーカーを見つけた時の動作
-    // ==========================================
     const markerA = document.getElementById('marker-a');
     markerA.addEventListener('markerFound', () => {
       if(actionTimeout) clearTimeout(actionTimeout); 
@@ -419,9 +411,6 @@
       statusDisplay.style.display = "none";
     });
 
-    // ==========================================
-    // B面マーカーを見つけた時の動作
-    // ==========================================
     const markerB = document.getElementById('marker-b');
     markerB.addEventListener('markerFound', () => {
       if(actionTimeout) clearTimeout(actionTimeout);

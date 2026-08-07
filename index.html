@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>想いマグ - OMOI-MAG AR</title>
   
-  <!-- ★大修正：スマホで最も安定してカメラが起動するバージョン(1.3.0)に変更しました！ -->
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
@@ -78,7 +77,9 @@
   </script>
 
   <style>
-    body { margin: 0; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: transparent; }
+    /* 背景を透明にし、カメラが見えるように強制します */
+    body { margin: 0; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: transparent !important; }
+    html { background-color: transparent !important; }
     
     #start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 20px; box-sizing: border-box; }
     #start-btn { padding: 15px 40px; font-size: 20px; font-weight: bold; background: #FF8C00; color: white; border: none; border-radius: 30px; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 10px rgba(255, 140, 0, 0.4); }
@@ -130,7 +131,7 @@
       <h4>A面の設定</h4>
       <div class="form-group">
         <label>メッセージ (15文字まで)</label>
-        <input type="text" id="input-msg-a" value="いつもありがとう。" maxlength="15" placeholder="ここにメッセージを入力">
+        <input type="text" id="input-msg-a" value="いつもありがとう。" maxlength="15" placeholder="手動でメッセージを入力してください">
       </div>
       
       <div class="form-group">
@@ -169,18 +170,16 @@
     <button id="save-btn">保存してARを更新</button>
   </div>
 
-  <!-- ★大修正：alpha: true を追加し、背景のカーテンを完全に透明化しました！ -->
+  <!-- ★修正：フリーズを防ぐため a-assets を完全削除し、vr-mode-ui 等の不要機能をオフにしました -->
   <a-scene 
     embedded
     renderer="alpha: true; colorManagement: true;"
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
     cursor="rayOrigin: mouse"
-    raycaster="objects: .clickable">
+    raycaster="objects: .clickable"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
     
-    <a-assets>
-      <a-asset-item id="bear-model" src="models/bear.glb"></a-asset-item>
-    </a-assets>
-
     <a-light type="ambient" color="#ffffff" intensity="0.7"></a-light>
     <a-light type="directional" color="#ffffff" intensity="0.8" position="-1 2 1"></a-light>
 
@@ -201,9 +200,10 @@
           <a-plane id="ar-text-a" canvas-text="value: いつもありがとう。; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
         </a-entity>
         
+        <!-- ★大修正：a-assets を使わず直接URLで読み込むことで、エラー時のフリーズを回避します -->
         <a-entity 
           id="model-a"
-          gltf-model="#bear-model" 
+          gltf-model="url(models/bear.glb)" 
           scale="0.4 0.4 0.4" 
           position="-1.5 -1.5 -5"
           rotation="0 0 0">
@@ -227,9 +227,10 @@
           <a-plane id="ar-text-b" canvas-text="value: これからもよろしく！; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
         </a-entity>
         
+        <!-- ★大修正：a-assets を使わず直接URLで読み込むことで、エラー時のフリーズを回避します -->
         <a-entity 
           id="model-b"
-          gltf-model="#bear-model" 
+          gltf-model="url(models/bear.glb)" 
           scale="0.4 0.4 0.4" 
           position="-1.5 -1.5 -5"
           rotation="0 0 0">
@@ -280,7 +281,6 @@
     let mediaRecorder;
     let audioChunks = [];
     
-    // スマホ（iOS Safari）はSpeechRecognition非対応のため、手動入力を促します
     let recognition;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -351,6 +351,12 @@
       startOverlay.style.display = 'none'; 
       editBtn.style.display = 'flex'; 
       
+      // ★追加：iOS Safariでカメラがフリーズするのを防ぐため、強制的にビデオを再生させる
+      const videos = document.querySelectorAll('video');
+      videos.forEach(video => {
+        video.play().catch(e => console.warn("Camera video play error:", e));
+      });
+
       if (!isAudioUnlocked) {
         const allMusics = [document.getElementById('music1'), document.getElementById('music2'), document.getElementById('recorded-audio-a')];
         allMusics.forEach(audio => {

@@ -77,7 +77,6 @@
   </script>
 
   <style>
-    /* 背景を透明にし、カメラが見えるように強制します */
     body { margin: 0; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: transparent !important; }
     html { background-color: transparent !important; }
     
@@ -170,7 +169,6 @@
     <button id="save-btn">保存してARを更新</button>
   </div>
 
-  <!-- ★修正：フリーズを防ぐため a-assets を完全削除し、vr-mode-ui 等の不要機能をオフにしました -->
   <a-scene 
     embedded
     renderer="alpha: true; colorManagement: true;"
@@ -193,56 +191,60 @@
 
     <a-entity camera>
       
-      <!-- ▼ A面のコンテンツ -->
+      <!-- ▼ A面のコンテンツ（縦画面・横画面 両対応レイアウト） -->
       <a-entity id="ui-a" visible="false">
-        <a-entity id="paper-a" scale="0 0 0" position="0.2 0 -5" rotation="0 0 0">
+        <!-- ★修正: メッセージを画面中央の上部 (Y軸: 1.2) に配置 -->
+        <a-entity id="paper-a" scale="0 0 0" position="0 1.2 -5" rotation="0 0 0">
           <a-plane color="#FDF5E6" material="shader: flat; side: double;" position="0 0 0" scale="2 0.5 1"></a-plane>
           <a-plane id="ar-text-a" canvas-text="value: いつもありがとう。; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
         </a-entity>
         
-        <!-- ★大修正：a-assets を使わず直接URLで読み込むことで、エラー時のフリーズを回避します -->
+        <!-- ★修正: クマさんを画面中央の少し下 (Y軸: -0.8) に配置 -->
         <a-entity 
           id="model-a"
           gltf-model="url(models/bear.glb)" 
-          scale="0.4 0.4 0.4" 
-          position="-1.5 -1.5 -5"
+          scale="0.35 0.35 0.35" 
+          position="0 -0.8 -5"
           rotation="0 0 0">
         </a-entity>
         
+        <!-- ★修正: STOPボタンを画面中央の一番下 (Y軸: -2.8) に配置。サイズも大きく押しやすく。 -->
         <a-entity 
           id="stop-btn-a" 
           class="clickable" 
-          geometry="primitive: circle; radius: 0.3" 
-          material="color: #FF0000; shader: flat; side: double; transparent: true; opacity: 0.8" 
+          geometry="primitive: circle; radius: 0.35" 
+          material="color: #FF0000; shader: flat; side: double; transparent: true; opacity: 0.9" 
           text="value: STOP; color: #FFFFFF; align: center; wrapCount: 12; zOffset: 0.01" 
-          position="-2 1 -5" 
+          position="0 -2.8 -5" 
           stop-playback="side: a">
         </a-entity>
       </a-entity>
 
-      <!-- ▼ B面のコンテンツ -->
+      <!-- ▼ B面のコンテンツ（縦画面・横画面 両対応レイアウト） -->
       <a-entity id="ui-b" visible="false">
-        <a-entity id="paper-b" scale="0 0 0" position="0.2 0 -5" rotation="0 0 0">
+        <!-- ★修正: メッセージを画面中央の上部 (Y軸: 1.2) に配置 -->
+        <a-entity id="paper-b" scale="0 0 0" position="0 1.2 -5" rotation="0 0 0">
           <a-plane color="#FDF5E6" material="shader: flat; side: double;" position="0 0 0" scale="2 0.5 1"></a-plane>
           <a-plane id="ar-text-b" canvas-text="value: これからもよろしく！; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
         </a-entity>
         
-        <!-- ★大修正：a-assets を使わず直接URLで読み込むことで、エラー時のフリーズを回避します -->
+        <!-- ★修正: クマさんを画面中央の少し下 (Y軸: -0.8) に配置 -->
         <a-entity 
           id="model-b"
           gltf-model="url(models/bear.glb)" 
-          scale="0.4 0.4 0.4" 
-          position="-1.5 -1.5 -5"
+          scale="0.35 0.35 0.35" 
+          position="0 -0.8 -5"
           rotation="0 0 0">
         </a-entity>
 
+        <!-- ★修正: STOPボタンを画面中央の一番下 (Y軸: -2.8) に配置。 -->
         <a-entity 
           id="stop-btn-b" 
           class="clickable" 
-          geometry="primitive: circle; radius: 0.3" 
-          material="color: #FF0000; shader: flat; side: double; transparent: true; opacity: 0.8" 
+          geometry="primitive: circle; radius: 0.35" 
+          material="color: #FF0000; shader: flat; side: double; transparent: true; opacity: 0.9" 
           text="value: STOP; color: #FFFFFF; align: center; wrapCount: 12; zOffset: 0.01" 
-          position="-2 1 -5" 
+          position="0 -2.8 -5" 
           stop-playback="side: b">
         </a-entity>
       </a-entity>
@@ -351,7 +353,6 @@
       startOverlay.style.display = 'none'; 
       editBtn.style.display = 'flex'; 
       
-      // ★追加：iOS Safariでカメラがフリーズするのを防ぐため、強制的にビデオを再生させる
       const videos = document.querySelectorAll('video');
       videos.forEach(video => {
         video.play().catch(e => console.warn("Camera video play error:", e));

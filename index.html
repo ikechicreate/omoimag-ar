@@ -180,12 +180,12 @@
           <a-plane id="ar-text-a" canvas-text="value: いつもありがとう。; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
         </a-entity>
         
-        <!-- ★修正：クマさんの位置を -0.05 に下げて被らないようにしました -->
+        <!-- ★元通り bear.glb に修正しました -->
         <a-entity 
           id="model-a"
-          gltf-model="url(models/boombox.glb)" 
+          gltf-model="url(models/bear.glb)" 
           scale="0.25 0.25 0.25" 
-          position="0 0 -5"
+          position="0 -1.2 -5"
           rotation="0 0 0">
         </a-entity>
       </a-entity>
@@ -197,12 +197,12 @@
           <a-plane id="ar-text-b" canvas-text="value: これからもよろしく！; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
         </a-entity>
         
-        <!-- ★修正：クマさんの位置を -0.05 に下げて被らないようにしました -->
+        <!-- ★元通り bear.glb に修正しました -->
         <a-entity 
           id="model-b"
-          gltf-model="url(models/boombox.glb)" 
+          gltf-model="url(models/bear.glb)" 
           scale="0.25 0.25 0.25" 
-          position="0 0 -5"
+          position="0 -1.2 -5"
           rotation="0 0 0">
         </a-entity>
       </a-entity>
@@ -317,7 +317,6 @@
         video.play().catch(e => console.warn("Camera video play error:", e));
       });
 
-      // ★修正：勝手に音楽が鳴らないように、無音で読み込み（load）だけ行う仕様に変更
       if (!isAudioUnlocked) {
         const allMusics = [document.getElementById('music1'), document.getElementById('music2'), document.getElementById('recorded-audio-a')];
         allMusics.forEach(audio => {

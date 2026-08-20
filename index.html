@@ -10,9 +10,10 @@
   <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
   
   <script>
+    // AR空間に文字を出すための部品（変更なし）
     AFRAME.registerComponent('canvas-text', {
       schema: {
-        value: { type: 'string', default: 'いつもありがとう。' },
+        value: { type: 'string', default: 'メッセージが届いています' },
         color: { type: 'string', default: '#333333' }
       },
       init: function () {
@@ -56,101 +57,60 @@
     
     #start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 20px; box-sizing: border-box; }
     #start-btn { padding: 15px 40px; font-size: 20px; font-weight: bold; background: #FF8C00; color: white; border: none; border-radius: 30px; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 10px rgba(255, 140, 0, 0.4); }
-    #edit-btn { position: absolute; top: 20px; right: 20px; z-index: 1000; width: 50px; height: 50px; border-radius: 50%; background: white; border: none; font-size: 24px; cursor: pointer; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3); justify-content: center; align-items: center; }
     
-    #settings-modal { position: absolute; bottom: -100%; left: 0; width: 100%; height: 80vh; overflow-y: auto; background: white; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; box-sizing: border-box; z-index: 2000; transition: bottom 0.3s ease-in-out; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); }
+    /* B面認識時に出る録音スタートボタン */
+    #show-record-btn { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); padding: 15px 30px; font-size: 18px; font-weight: bold; background: #E88C30; color: white; border: none; border-radius: 30px; cursor: pointer; display: none; z-index: 1500; box-shadow: 0 4px 15px rgba(0,0,0,0.4); width: 80%; max-width: 300px; text-align: center; border: 2px solid white; }
+    
+    #settings-modal { position: absolute; bottom: -100%; left: 0; width: 100%; height: auto; padding-bottom: 40px; background: white; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; box-sizing: border-box; z-index: 2000; transition: bottom 0.3s ease-in-out; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); }
     #settings-modal.active { bottom: 0; }
-    .setting-section { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #4B7B9E; }
-    .setting-section.b-side { border-left-color: #E88C30; }
-    .setting-section h4 { margin-top: 0; margin-bottom: 15px; color: #333; font-size: 18px; }
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; font-size: 14px; }
-    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
+    .setting-section { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #E88C30; }
+    .setting-section h4 { margin-top: 0; margin-bottom: 15px; color: #333; font-size: 18px; text-align: center; }
     
     .record-controls { display: flex; gap: 10px; margin-top: 10px; }
-    .record-btn { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; background: #e74c3c; color: white; }
+    .record-btn { flex: 1; padding: 15px; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; background: #e74c3c; color: white; }
     .record-btn:disabled { background: #ccc; cursor: not-allowed; }
-    .stop-btn { flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; background: #34495e; color: white; }
+    .stop-btn { flex: 1; padding: 15px; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; background: #34495e; color: white; }
     .stop-btn:disabled { background: #ccc; cursor: not-allowed; }
-    .audio-preview { width: 100%; margin-top: 10px; display: none; }
+    .audio-preview { width: 100%; margin-top: 15px; display: none; }
 
-    #save-btn { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; background: #4B7B9E; color: white; border: none; border-radius: 10px; cursor: pointer; margin-bottom: 30px; }
+    #save-btn { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; background: #4B7B9E; color: white; border: none; border-radius: 10px; cursor: pointer; }
     .close-btn { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #888; line-height: 1; }
     
     #status-display { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(75, 123, 158, 0.9); color: white; padding: 12px 24px; border-radius: 30px; font-weight: bold; font-size: 16px; z-index: 1000; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
-    #universal-stop-btn {
-      position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-      width: 80px; height: 80px; background-color: #E74C3C; color: white; border-radius: 50%;
-      display: none; justify-content: center; align-items: center; font-weight: bold; font-size: 18px;
-      z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 3px solid #fff; cursor: pointer;
-    }
-    #universal-stop-btn:active { background-color: #c0392b; transform: translateX(-50%) scale(0.95); }
+    /* 再生停止ボタン（A面用） */
+    #universal-stop-btn { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); width: 80px; height: 80px; background-color: #34495e; color: white; border-radius: 50%; display: none; justify-content: center; align-items: center; font-weight: bold; font-size: 16px; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 3px solid #fff; cursor: pointer; }
   </style>
 </head>
 <body>
 
   <div id="status-display">マーカーを認識しました！</div>
-  
-  <div id="universal-stop-btn">STOP</div>
+  <div id="universal-stop-btn">停止</div>
+  <button id="show-record-btn">返信を録音する 🎤</button>
 
   <audio id="music1" src="music/music1.mp3" preload="auto" style="display: none;"></audio>
-  <audio id="music2" src="music/music2.mp3" preload="auto" style="display: none;"></audio>
-  <audio id="recorded-audio-a" preload="auto" style="display: none;"></audio>
+  <audio id="recorded-audio" preload="auto" style="display: none;"></audio>
 
   <div id="start-overlay">
-    <h2>想いマグ - OMOI-MAG AR</h2>
+    <h2>想いマグ - 通信機</h2>
     <p style="font-size: 16px; margin-bottom: 20px;">カメラを許可し、マナーモードを<br>解除してお楽しみください</p>
     <button id="start-btn">スタート</button>
   </div>
 
-  <button id="edit-btn">✏️</button>
-
+  <!-- 返信用録音モーダル（B面からのみ開く） -->
   <div id="settings-modal">
     <span class="close-btn" id="close-btn">×</span>
-    <h3 style="margin-top:0; color: #333; text-align: center;">コンテンツの編集</h3>
+    <h3 style="margin-top:0; color: #333; text-align: center;">相手へ返信する</h3>
     
     <div class="setting-section">
-      <h4>A面の設定</h4>
-      <div class="form-group">
-        <label>メッセージ (15文字まで)</label>
-        <input type="text" id="input-msg-a" value="いつもありがとう。" maxlength="15" placeholder="手動でメッセージを入力してください">
+      <h4>あなたの声を録音</h4>
+      <div class="record-controls">
+        <button id="record-btn" class="record-btn">録音開始 🔴</button>
+        <button id="stop-btn" class="stop-btn" disabled>停止 ⬛</button>
       </div>
-      
-      <div class="form-group">
-        <label>音声を録音する（A面用）</label>
-        <div class="record-controls">
-          <button id="record-btn-a" class="record-btn">録音 🔴</button>
-          <button id="stop-btn-a" class="stop-btn" disabled>停止 ⬛</button>
-        </div>
-        <audio id="preview-a" class="audio-preview" controls></audio>
-      </div>
-
-      <div class="form-group">
-        <label>後ろで流すBGMを選択</label>
-        <select id="select-music-a">
-          <option value="none">BGMなし（音声のみ）</option>
-          <option value="music1" selected>曲1 (music1.mp3)</option>
-          <option value="music2">曲2 (music2.mp3)</option>
-        </select>
-      </div>
+      <audio id="preview-audio" class="audio-preview" controls></audio>
     </div>
-
-    <div class="setting-section b-side">
-      <h4>B面の設定</h4>
-      <div class="form-group">
-        <label>メッセージ (15文字まで)</label>
-        <input type="text" id="input-msg-b" value="これからもよろしく！" maxlength="15">
-      </div>
-      <div class="form-group">
-        <label>BGMを選択</label>
-        <select id="select-music-b">
-          <option value="music1">曲1 (music1.mp3)</option>
-          <option value="music2" selected>曲2 (music2.mp3)</option>
-        </select>
-      </div>
-    </div>
-    <button id="save-btn">保存してARを更新</button>
+    <button id="save-btn">この声で返信する（保存）</button>
   </div>
 
   <a-scene 
@@ -163,105 +123,70 @@
     <a-light type="ambient" color="#ffffff" intensity="0.7"></a-light>
     <a-light type="directional" color="#ffffff" intensity="0.8" position="-1 2 1"></a-light>
 
+    <!-- A面（聞く面：Hiroマーカー） -->
     <a-marker preset="hiro" id="marker-a" emitevents="true">
       <a-box scale="0.01 0.01 0.01" material="transparent: true; opacity: 0;"></a-box>
     </a-marker>
     
+    <!-- B面（話す面：Kanjiマーカー） -->
     <a-marker preset="kanji" id="marker-b" emitevents="true">
       <a-box scale="0.01 0.01 0.01" material="transparent: true; opacity: 0;"></a-box>
     </a-marker>
 
     <a-entity camera>
-      
-      <!-- ▼ A面のコンテンツ -->
+      <!-- ▼ A面用コンテンツ（再生） -->
       <a-entity id="ui-a" visible="false">
         <a-entity id="paper-a" scale="0 0 0" position="0 1.0 -5" rotation="0 0 0">
           <a-plane color="#FDF5E6" material="shader: flat; side: double;" position="0 0 0" scale="2 0.5 1"></a-plane>
-          <a-plane id="ar-text-a" canvas-text="value: いつもありがとう。; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
+          <a-plane id="ar-text-a" canvas-text="value: メッセージが届いています; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
         </a-entity>
-        
-        <!-- ★元通り bear.glb に修正しました -->
-        <a-entity 
-          id="model-a"
-          gltf-model="url(models/bear.glb)" 
-          scale="0.4 0.4 0.4" 
-          position="0 -1.2 -5"
-          rotation="0 0 0">
-        </a-entity>
+        <a-entity id="model-a" gltf-model="url(models/bear.glb)" scale="0.4 0.4 0.4" position="0 -1.2 -5"></a-entity>
       </a-entity>
 
-      <!-- ▼ B面のコンテンツ -->
+      <!-- ▼ B面用コンテンツ（録音案内） -->
       <a-entity id="ui-b" visible="false">
         <a-entity id="paper-b" scale="0 0 0" position="0 1.0 -5" rotation="0 0 0">
           <a-plane color="#FDF5E6" material="shader: flat; side: double;" position="0 0 0" scale="2 0.5 1"></a-plane>
-          <a-plane id="ar-text-b" canvas-text="value: これからもよろしく！; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
+          <a-plane canvas-text="value: 画面から返信を録音してね; color: #E88C30;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
         </a-entity>
-        
-        <!-- ★元通り bear.glb に修正しました -->
-        <a-entity 
-          id="model-b"
-          gltf-model="url(models/bear.glb)" 
-          scale="0.4 0.4 0.4" 
-          position="0 -1.2 -5"
-          rotation="0 0 0">
-        </a-entity>
+        <a-entity id="model-b" gltf-model="url(models/bear.glb)" scale="0.4 0.4 0.4" position="0 -1.2 -5"></a-entity>
       </a-entity>
-      
     </a-entity>
   </a-scene>
 
   <script>
-    const DELAY_TIME_MS = 2100; 
+    const DELAY_TIME_MS = 1500; 
 
     const startOverlay = document.getElementById('start-overlay');
     const startBtn = document.getElementById('start-btn');
-    const editBtn = document.getElementById('edit-btn');
     const settingsModal = document.getElementById('settings-modal');
     const closeBtn = document.getElementById('close-btn');
     const saveBtn = document.getElementById('save-btn');
     const statusDisplay = document.getElementById('status-display');
     const universalStopBtn = document.getElementById('universal-stop-btn');
-    
-    const inputMsgA = document.getElementById('input-msg-a');
-    const selectMusicA = document.getElementById('select-music-a');
-    const inputMsgB = document.getElementById('input-msg-b');
-    const selectMusicB = document.getElementById('select-music-b');
-    const arTextA = document.getElementById('ar-text-a');
-    const arTextB = document.getElementById('ar-text-b');
+    const showRecordBtn = document.getElementById('show-record-btn');
     
     const uiA = document.getElementById('ui-a');
     const uiB = document.getElementById('ui-b');
     const paperA = document.getElementById('paper-a');
     const paperB = document.getElementById('paper-b');
 
-    const recordBtnA = document.getElementById('record-btn-a');
-    const stopBtnA = document.getElementById('stop-btn-a');
-    const previewA = document.getElementById('preview-a');
-    const recordedAudioA = document.getElementById('recorded-audio-a');
+    const recordBtn = document.getElementById('record-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const previewAudio = document.getElementById('preview-audio');
+    const recordedAudio = document.getElementById('recorded-audio');
+    const arTextA = document.getElementById('ar-text-a');
 
     let mediaRecorder;
     let audioChunks = [];
-    
-    let recognition;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      recognition = new SpeechRecognition();
-      recognition.lang = 'ja-JP';
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      
-      recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = 0; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        if (transcript) {
-          inputMsgA.value = transcript.substring(0, 15);
-        }
-      };
-    }
+    let isAudioUnlocked = false;
+    let activeBGM = null; 
+    let activeVoice = null;
+    let actionTimeout = null;
+    let hasRecordedMessage = false; // 録音済みかどうかの判定
 
-    recordBtnA.addEventListener('click', async () => {
+    // 録音機能の処理
+    recordBtn.addEventListener('click', async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorder = new MediaRecorder(stream);
@@ -273,149 +198,117 @@
         mediaRecorder.onstop = () => {
           const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
           const audioUrl = URL.createObjectURL(audioBlob);
-          previewA.src = audioUrl;
-          previewA.style.display = 'block';
-          recordedAudioA.src = audioUrl; 
+          previewAudio.src = audioUrl;
+          previewAudio.style.display = 'block';
+          recordedAudio.src = audioUrl; 
           audioChunks = []; 
+          hasRecordedMessage = true;
         };
         
         mediaRecorder.start();
-        if (recognition) recognition.start();
-
-        recordBtnA.disabled = true;
-        stopBtnA.disabled = false;
-        recordBtnA.innerText = '録音中...';
+        recordBtn.disabled = true;
+        stopBtn.disabled = false;
+        recordBtn.innerText = '録音中...';
       } catch (err) {
         alert('マイクのアクセスが拒否されたか、エラーが発生しました。');
       }
     });
 
-    stopBtnA.addEventListener('click', () => {
+    stopBtn.addEventListener('click', () => {
       if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
         mediaRecorder.stream.getTracks().forEach(track => track.stop()); 
-        if (recognition) recognition.stop();
-
-        recordBtnA.disabled = false;
-        stopBtnA.disabled = true;
-        recordBtnA.innerText = '録音 🔴';
+        recordBtn.disabled = false;
+        stopBtn.disabled = true;
+        recordBtn.innerText = 'もう一度録音する';
       }
     });
 
-    let currentBgmIdA = 'music1'; 
-    let currentBgmIdB = 'music2';
-    let activeBGM = null; 
-    let activeVoice = null;
-    let isAudioUnlocked = false;
-
+    // スタートボタン処理
     startBtn.addEventListener('click', () => {
       startOverlay.style.display = 'none'; 
-      editBtn.style.display = 'flex'; 
-      
       const videos = document.querySelectorAll('video');
-      videos.forEach(video => {
-        video.play().catch(e => console.warn("Camera video play error:", e));
-      });
+      videos.forEach(video => video.play().catch(e => console.warn("Camera error:", e)));
 
       if (!isAudioUnlocked) {
-        const allMusics = [document.getElementById('music1'), document.getElementById('music2'), document.getElementById('recorded-audio-a')];
-        allMusics.forEach(audio => {
-          if(audio) {
-            audio.load();
-          }
-        });
+        document.getElementById('music1').load();
+        recordedAudio.load();
         isAudioUnlocked = true;
       }
     });
 
-    editBtn.addEventListener('click', () => settingsModal.classList.add('active'));
+    // モーダルの開閉
+    showRecordBtn.addEventListener('click', () => settingsModal.classList.add('active'));
     closeBtn.addEventListener('click', () => settingsModal.classList.remove('active'));
 
+    // 保存ボタン（A面へメッセージを送った風にする）
     saveBtn.addEventListener('click', () => {
-      arTextA.setAttribute('canvas-text', 'value', inputMsgA.value);
-      arTextB.setAttribute('canvas-text', 'value', inputMsgB.value);
-      currentBgmIdA = selectMusicA.value;
-      currentBgmIdB = selectMusicB.value;
       settingsModal.classList.remove('active'); 
+      showRecordBtn.style.display = 'none'; // 保存したら録音ボタンを隠す
+      alert("返信を保存しました！\n（A面をかざすと新しいメッセージが聞けます）");
+      
+      // A面のテキストを書き換え
+      if(hasRecordedMessage) {
+        arTextA.setAttribute('canvas-text', 'value', "新しい返信が届きました");
+      }
     });
 
     function playTargetMusic(bgmId, voiceId, uiElement, paperElement) {
-      if (activeBGM) { activeBGM.pause(); activeBGM.currentTime = 0; activeBGM.onended = null; }
-      if (activeVoice) { activeVoice.pause(); activeVoice.currentTime = 0; activeVoice.onended = null; }
+      if (activeBGM) { activeBGM.pause(); activeBGM.currentTime = 0; }
+      if (activeVoice) { activeVoice.pause(); activeVoice.currentTime = 0; }
       
-      activeBGM = (bgmId && bgmId !== 'none') ? document.getElementById(bgmId) : null;
-      activeVoice = voiceId ? document.getElementById(voiceId) : null;
+      activeBGM = document.getElementById(bgmId);
+      activeVoice = hasRecordedMessage ? document.getElementById(voiceId) : null;
 
-      let hasBgm = activeBGM && activeBGM.src && activeBGM.src !== window.location.href;
-      let hasVoice = activeVoice && activeVoice.src && activeVoice.src !== window.location.href;
-
-      if (!hasBgm && !hasVoice) return; 
-
-      if (hasVoice) {
-        activeVoice.currentTime = 0;
+      if (activeVoice) {
         activeVoice.play().catch(e => console.error("Voice play failed:", e)); 
       }
-
-      if (hasBgm) {
-        activeBGM.currentTime = 0;
-        activeBGM.volume = hasVoice ? 0.3 : 1.0; 
+      if (activeBGM) {
+        activeBGM.volume = activeVoice ? 0.3 : 1.0; 
         activeBGM.play().catch(e => console.error("BGM play failed:", e)); 
       }
 
-      let longestAudio = hasBgm ? activeBGM : activeVoice; 
-      
+      let longestAudio = activeVoice || activeBGM; 
       if (longestAudio) {
         longestAudio.onended = () => {
           paperElement.setAttribute('scale', '0 0 0');
-          uiElement.setAttribute('visible', false);
           universalStopBtn.style.display = 'none'; 
         };
       }
     }
 
-    let actionTimeout = null;
-
     function stopAllMediaAndHide() {
       if (actionTimeout) clearTimeout(actionTimeout);
-
-      if (activeBGM) { activeBGM.pause(); activeBGM.currentTime = 0; activeBGM.onended = null; }
-      if (activeVoice) { activeVoice.pause(); activeVoice.currentTime = 0; activeVoice.onended = null; }
+      if (activeBGM) { activeBGM.pause(); activeBGM.currentTime = 0; }
+      if (activeVoice) { activeVoice.pause(); activeVoice.currentTime = 0; }
       
       paperA.setAttribute('scale', '0 0 0');
-      uiA.setAttribute('visible', false);
       paperB.setAttribute('scale', '0 0 0');
-      uiB.setAttribute('visible', false);
-
       universalStopBtn.style.display = 'none'; 
-      statusDisplay.style.display = 'none';
     }
 
     universalStopBtn.addEventListener('click', stopAllMediaAndHide);
 
     // ==========================================
-    // A面マーカーを見つけた時の動作
+    // A面マーカーを見つけた時の動作（聞く）
     // ==========================================
     const markerA = document.getElementById('marker-a');
     markerA.addEventListener('markerFound', () => {
       if(actionTimeout) clearTimeout(actionTimeout); 
-      
-      statusDisplay.innerText = "A面を認識しました！";
+      statusDisplay.innerText = "A面：メッセージを再生します";
       statusDisplay.style.display = "block";
+      showRecordBtn.style.display = "none"; // A面では録音ボタンを隠す
       universalStopBtn.style.display = "flex"; 
       
       uiA.setAttribute('visible', true);
       uiB.setAttribute('visible', false);
       paperA.setAttribute('scale', '0 0 0');
       
-      const modelA = document.getElementById('model-a');
-      modelA.removeAttribute('animation-mixer');
-      setTimeout(() => {
-        modelA.setAttribute('animation-mixer', 'clip: *; loop: once; clampWhenFinished: true;');
-      }, 50);
+      document.getElementById('model-a').setAttribute('animation-mixer', 'clip: *; loop: once; clampWhenFinished: true;');
       
       actionTimeout = setTimeout(() => {
         paperA.setAttribute('scale', '1 1 1'); 
-        playTargetMusic(currentBgmIdA, 'recorded-audio-a', uiA, paperA); 
+        playTargetMusic('music1', 'recorded-audio', uiA, paperA); 
       }, DELAY_TIME_MS);
     });
 
@@ -424,29 +317,25 @@
     });
 
     // ==========================================
-    // B面マーカーを見つけた時の動作
+    // B面マーカーを見つけた時の動作（話す・録音する）
     // ==========================================
     const markerB = document.getElementById('marker-b');
     markerB.addEventListener('markerFound', () => {
       if(actionTimeout) clearTimeout(actionTimeout);
+      stopAllMediaAndHide(); // B面にしたら再生を止める
       
-      statusDisplay.innerText = "B面を認識しました！";
+      statusDisplay.innerText = "B面：返信モード";
       statusDisplay.style.display = "block";
-      universalStopBtn.style.display = "flex"; 
+      showRecordBtn.style.display = "block"; // 録音ボタンを表示
       
       uiB.setAttribute('visible', true);
       uiA.setAttribute('visible', false);
       paperB.setAttribute('scale', '0 0 0');
       
-      const modelB = document.getElementById('model-b');
-      modelB.removeAttribute('animation-mixer');
-      setTimeout(() => {
-        modelB.setAttribute('animation-mixer', 'clip: *; loop: once; clampWhenFinished: true;');
-      }, 50);
+      document.getElementById('model-b').setAttribute('animation-mixer', 'clip: *; loop: once; clampWhenFinished: true;');
       
       actionTimeout = setTimeout(() => {
         paperB.setAttribute('scale', '1 1 1');
-        playTargetMusic(currentBgmIdB, null, uiB, paperB); 
       }, DELAY_TIME_MS);
     });
 

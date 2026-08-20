@@ -10,7 +10,7 @@
   <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
   
   <script>
-    // AR空間に文字を出すための部品（変更なし）
+    // AR空間に文字を出すための部品
     AFRAME.registerComponent('canvas-text', {
       schema: {
         value: { type: 'string', default: 'メッセージが届いています' },
@@ -61,11 +61,15 @@
     /* B面認識時に出る録音スタートボタン */
     #show-record-btn { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); padding: 15px 30px; font-size: 18px; font-weight: bold; background: #E88C30; color: white; border: none; border-radius: 30px; cursor: pointer; display: none; z-index: 1500; box-shadow: 0 4px 15px rgba(0,0,0,0.4); width: 80%; max-width: 300px; text-align: center; border: 2px solid white; }
     
-    #settings-modal { position: absolute; bottom: -100%; left: 0; width: 100%; height: auto; padding-bottom: 40px; background: white; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; box-sizing: border-box; z-index: 2000; transition: bottom 0.3s ease-in-out; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); }
+    #settings-modal { position: absolute; bottom: -100%; left: 0; width: 100%; height: auto; max-height: 90vh; overflow-y: auto; padding-bottom: 40px; background: white; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; box-sizing: border-box; z-index: 2000; transition: bottom 0.3s ease-in-out; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); }
     #settings-modal.active { bottom: 0; }
     .setting-section { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #E88C30; }
-    .setting-section h4 { margin-top: 0; margin-bottom: 15px; color: #333; font-size: 18px; text-align: center; }
+    .setting-section h4 { margin-top: 0; margin-bottom: 15px; color: #333; font-size: 16px; font-weight: bold; }
     
+    /* テキスト入力欄のスタイル */
+    .form-group { margin-bottom: 15px; }
+    .form-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
+
     .record-controls { display: flex; gap: 10px; margin-top: 10px; }
     .record-btn { flex: 1; padding: 15px; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; background: #e74c3c; color: white; }
     .record-btn:disabled { background: #ccc; cursor: not-allowed; }
@@ -76,16 +80,20 @@
     #save-btn { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; background: #4B7B9E; color: white; border: none; border-radius: 10px; cursor: pointer; }
     .close-btn { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #888; line-height: 1; }
     
-    #status-display { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(75, 123, 158, 0.9); color: white; padding: 12px 24px; border-radius: 30px; font-weight: bold; font-size: 16px; z-index: 1000; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    #status-display { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(75, 123, 158, 0.9); color: white; padding: 12px 24px; border-radius: 30px; font-weight: bold; font-size: 16px; z-index: 1000; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); white-space: nowrap; }
 
-    /* 再生停止ボタン（A面用） */
-    #universal-stop-btn { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); width: 80px; height: 80px; background-color: #34495e; color: white; border-radius: 50%; display: none; justify-content: center; align-items: center; font-weight: bold; font-size: 16px; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 3px solid #fff; cursor: pointer; }
+    /* 再生停止ボタン（A面用）を大きく分かりやすく変更 */
+    #universal-stop-btn { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); padding: 15px 30px; background-color: #e74c3c; color: white; border-radius: 30px; display: none; justify-content: center; align-items: center; font-weight: bold; font-size: 18px; z-index: 1500; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 2px solid #fff; cursor: pointer; width: 80%; max-width: 300px; text-align: center; }
   </style>
 </head>
 <body>
 
   <div id="status-display">マーカーを認識しました！</div>
-  <div id="universal-stop-btn">停止</div>
+  
+  <!-- A面で表示する停止ボタン -->
+  <button id="universal-stop-btn">再生停止 ⬛</button>
+  
+  <!-- B面で表示する返信ボタン -->
   <button id="show-record-btn">返信を録音する 🎤</button>
 
   <audio id="music1" src="music/music1.mp3" preload="auto" style="display: none;"></audio>
@@ -102,15 +110,23 @@
     <span class="close-btn" id="close-btn">×</span>
     <h3 style="margin-top:0; color: #333; text-align: center;">相手へ返信する</h3>
     
+    <!-- ★追加：テキスト入力欄 -->
     <div class="setting-section">
-      <h4>あなたの声を録音</h4>
+      <h4>① 文字のメッセージ (15文字まで)</h4>
+      <div class="form-group">
+        <input type="text" id="input-msg-b" placeholder="例：メッセージありがとう！" maxlength="15">
+      </div>
+    </div>
+
+    <div class="setting-section">
+      <h4>② あなたの声を録音</h4>
       <div class="record-controls">
         <button id="record-btn" class="record-btn">録音開始 🔴</button>
         <button id="stop-btn" class="stop-btn" disabled>停止 ⬛</button>
       </div>
       <audio id="preview-audio" class="audio-preview" controls></audio>
     </div>
-    <button id="save-btn">この声で返信する（保存）</button>
+    <button id="save-btn">この内容で返信する（保存）</button>
   </div>
 
   <a-scene 
@@ -171,6 +187,7 @@
     const paperA = document.getElementById('paper-a');
     const paperB = document.getElementById('paper-b');
 
+    const inputMsgB = document.getElementById('input-msg-b'); // ★追加：テキスト入力
     const recordBtn = document.getElementById('record-btn');
     const stopBtn = document.getElementById('stop-btn');
     const previewAudio = document.getElementById('preview-audio');
@@ -183,7 +200,7 @@
     let activeBGM = null; 
     let activeVoice = null;
     let actionTimeout = null;
-    let hasRecordedMessage = false; // 録音済みかどうかの判定
+    let hasRecordedMessage = false;
 
     // 録音機能の処理
     recordBtn.addEventListener('click', async () => {
@@ -224,7 +241,6 @@
       }
     });
 
-    // スタートボタン処理
     startBtn.addEventListener('click', () => {
       startOverlay.style.display = 'none'; 
       const videos = document.querySelectorAll('video');
@@ -237,20 +253,24 @@
       }
     });
 
-    // モーダルの開閉
     showRecordBtn.addEventListener('click', () => settingsModal.classList.add('active'));
     closeBtn.addEventListener('click', () => settingsModal.classList.remove('active'));
 
-    // 保存ボタン（A面へメッセージを送った風にする）
+    // ★変更：保存ボタンを押した時の処理（テキストと音声をA面に適用）
     saveBtn.addEventListener('click', () => {
       settingsModal.classList.remove('active'); 
-      showRecordBtn.style.display = 'none'; // 保存したら録音ボタンを隠す
-      alert("返信を保存しました！\n（A面をかざすと新しいメッセージが聞けます）");
+      showRecordBtn.style.display = 'none'; 
+      
+      // 入力された文字を取得（空欄ならデフォルト文字）
+      let newMsg = inputMsgB.value.trim();
+      if (newMsg === '') {
+        newMsg = "新しい返信が届きました";
+      }
       
       // A面のテキストを書き換え
-      if(hasRecordedMessage) {
-        arTextA.setAttribute('canvas-text', 'value', "新しい返信が届きました");
-      }
+      arTextA.setAttribute('canvas-text', 'value', newMsg);
+      
+      alert("返信を保存しました！\n（A面をかざすと確認できます）");
     });
 
     function playTargetMusic(bgmId, voiceId, uiElement, paperElement) {
@@ -272,7 +292,7 @@
       if (longestAudio) {
         longestAudio.onended = () => {
           paperElement.setAttribute('scale', '0 0 0');
-          universalStopBtn.style.display = 'none'; 
+          universalStopBtn.style.display = 'none'; // 再生が終わったら停止ボタンを消す
         };
       }
     }
@@ -284,7 +304,7 @@
       
       paperA.setAttribute('scale', '0 0 0');
       paperB.setAttribute('scale', '0 0 0');
-      universalStopBtn.style.display = 'none'; 
+      universalStopBtn.style.display = 'none'; // 停止ボタンを押したらボタン自身も消す
     }
 
     universalStopBtn.addEventListener('click', stopAllMediaAndHide);
@@ -297,8 +317,9 @@
       if(actionTimeout) clearTimeout(actionTimeout); 
       statusDisplay.innerText = "A面：メッセージを再生します";
       statusDisplay.style.display = "block";
-      showRecordBtn.style.display = "none"; // A面では録音ボタンを隠す
-      universalStopBtn.style.display = "flex"; 
+      
+      showRecordBtn.style.display = "none"; // B面用のボタンは隠す
+      universalStopBtn.style.display = "flex"; // ★追加：A面では停止ボタンを表示
       
       uiA.setAttribute('visible', true);
       uiB.setAttribute('visible', false);
@@ -322,11 +343,13 @@
     const markerB = document.getElementById('marker-b');
     markerB.addEventListener('markerFound', () => {
       if(actionTimeout) clearTimeout(actionTimeout);
-      stopAllMediaAndHide(); // B面にしたら再生を止める
+      stopAllMediaAndHide(); // B面にしたら再生を止めて停止ボタンも消す
       
       statusDisplay.innerText = "B面：返信モード";
       statusDisplay.style.display = "block";
-      showRecordBtn.style.display = "block"; // 録音ボタンを表示
+      
+      showRecordBtn.style.display = "block"; // B面用の録音ボタンを表示
+      universalStopBtn.style.display = "none"; // ★追加：B面では停止ボタンを隠す
       
       uiB.setAttribute('visible', true);
       uiA.setAttribute('visible', false);

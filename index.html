@@ -206,36 +206,45 @@
       }
     }
 
-    // 磁気センサー (Magnetometer API) の組み込み
+   // 磁気センサーの数値可視化（診断用）
     function initMagnetometer() {
       if ('Magnetometer' in window) {
         try {
           const magSensor = new Magnetometer({ frequency: 10 });
           magSensor.addEventListener('reading', () => {
-            // スマートフォンに近づいた磁石のZ軸（画面垂直方向）の強度で判定
-            const z = magSensor.z;
-            const THRESHOLD = 200; // μT (地磁気は通常50前後。磁石が近づくと数百〜数千に跳ね上がる)
+            const z = Math.round(magSensor.z);
+            const x = Math.round(magSensor.x);
+            const y = Math.round(magSensor.y);
+            
+            // 画面上部に数値をリアルタイム表示
+            toastMsg.innerText = `Z:${z} (X:${x}, Y:${y})`;
+            toastMsg.style.opacity = '1';
+
+            const THRESHOLD = 60; // 反応しやすいように感度を緩めました
 
             if (z > THRESHOLD && currentMode !== 'A') {
-              showToast("🧲 磁力(N極)でA面を検知しました");
+              showToast(`🧲 N極検知 (Z:${z}) -> A面`);
               setMode('A', '磁力');
             } else if (z < -THRESHOLD && currentMode !== 'B') {
-              showToast("🧲 磁力(S極)でB面を検知しました");
+              showToast(`🧲 S極検知 (Z:${z}) -> B面`);
               setMode('B', '磁力');
             }
           });
+
           magSensor.addEventListener('error', e => {
-            console.warn('磁気センサーエラー:', e.error.message);
+            showToast(`センサーエラー: ${e.error.name}`);
+            console.warn('磁気センサーエラー:', e.error);
           });
+
           magSensor.start();
         } catch (e) {
-          console.warn('磁気センサー初期化失敗:', e);
+          showToast(`初期化失敗: ${e.message}`);
         }
       } else {
-        console.log('この端末/ブラウザは磁気センサーAPIに非対応です。');
+        showToast("この端末はMagnetometer非対応です");
       }
     }
-
+    
     // 音声認識
     let recognition = null;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;

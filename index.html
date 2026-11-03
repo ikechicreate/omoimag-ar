@@ -3,479 +3,75 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>想いマグ - OMOI-MAG AR</title>
+  <title>想いマグ - MindARテスト</title>
   
-  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
-  
-  <script>
-    // AR空間に文字を出すための部品
-    AFRAME.registerComponent('canvas-text', {
-      schema: {
-        value: { type: 'string', default: 'メッセージが届いています' },
-        color: { type: 'string', default: '#333333' }
-      },
-      init: function () {
-        this.canvas = document.createElement('canvas');
-        const dpr = window.devicePixelRatio || 2; 
-        this.canvas.width = 1024 * dpr;
-        this.canvas.height = 256 * dpr;
-        this.ctx = this.canvas.getContext('2d');
-        this.ctx.scale(dpr, dpr);
-        this.texture = new THREE.CanvasTexture(this.canvas);
-        this.texture.minFilter = THREE.LinearFilter;
-        this.texture.magFilter = THREE.LinearFilter;
-        this.material = new THREE.MeshBasicMaterial({
-          map: this.texture,
-          transparent: true,
-          side: THREE.DoubleSide
-        });
-        const applyMaterial = () => {
-          const mesh = this.el.getObject3D('mesh');
-          if (mesh) { mesh.material = this.material; this.drawText(); }
-        };
-        if (this.el.hasLoaded) { applyMaterial(); } 
-        else { this.el.addEventListener('loaded', applyMaterial); }
-      },
-      update: function () { if (this.ctx) { this.drawText(); } },
-      drawText: function() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.ctx.fillStyle = this.data.color;
-        this.ctx.font = "bold 100px 'Helvetica Neue', 'Hiragino Sans', 'Meiryo', sans-serif";
-        this.ctx.textAlign = "center";
-        this.ctx.textBaseline = "middle";
-        this.ctx.fillText(this.data.value, 1024 / 2, 256 / 2);
-        this.texture.needsUpdate = true;
-      }
-    });
-  </script>
+  <!-- A-Frame と MindAR のライブラリ -->
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    body { margin: 0; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: transparent !important; }
-    html { background-color: transparent !important; }
-    
-    #start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 20px; box-sizing: border-box; }
-    #start-btn { padding: 15px 40px; font-size: 20px; font-weight: bold; background: #FF8C00; color: white; border: none; border-radius: 30px; cursor: pointer; margin-top: 20px; box-shadow: 0 4px 10px rgba(255, 140, 0, 0.4); }
-    
-    /* B面認識時に出る録音スタートボタン */
-    #show-record-btn { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); padding: 15px 30px; font-size: 18px; font-weight: bold; background: #E88C30; color: white; border: none; border-radius: 30px; cursor: pointer; display: none; z-index: 1500; box-shadow: 0 4px 15px rgba(0,0,0,0.4); width: 80%; max-width: 300px; text-align: center; border: 2px solid white; }
-    
-    #settings-modal { position: absolute; bottom: -100%; left: 0; width: 100%; height: auto; max-height: 90vh; overflow-y: auto; padding-bottom: 40px; background: white; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; box-sizing: border-box; z-index: 2000; transition: bottom 0.3s ease-in-out; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); }
-    #settings-modal.active { bottom: 0; }
-    .setting-section { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #E88C30; }
-    .setting-section h4 { margin-top: 0; margin-bottom: 15px; color: #333; font-size: 16px; font-weight: bold; }
-    
-    /* テキスト入力欄のスタイル */
-    .form-group { margin-bottom: 15px; }
-    .form-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
-
-    /* レトロなRECインジケーター & タイマー */
-    .rec-indicator-box {
-      display: none;
-      align-items: center;
-      justify-content: space-between;
-      background: #222;
-      color: #00ff66;
-      font-family: 'Courier New', Courier, monospace;
-      padding: 10px 16px;
-      border-radius: 6px;
-      margin-bottom: 12px;
-      font-size: 18px;
-      font-weight: bold;
-      letter-spacing: 2px;
+    body { margin: 0; overflow: hidden; }
+    #status-msg {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-family: sans-serif;
+      z-index: 1000;
+      pointer-events: none;
     }
-    .rec-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #ff3b30;
-    }
-    .rec-dot {
-      width: 14px;
-      height: 14px;
-      background-color: #ff3b30;
-      border-radius: 50%;
-      animation: blink 1s infinite;
-    }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
-
-    .record-controls { display: flex; gap: 10px; margin-top: 10px; }
-    .record-btn { flex: 1; padding: 15px; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; background: #e74c3c; color: white; }
-    .record-btn:disabled { background: #ccc; cursor: not-allowed; }
-    .stop-btn { flex: 1; padding: 15px; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; background: #34495e; color: white; }
-    .stop-btn:disabled { background: #ccc; cursor: not-allowed; }
-    .audio-preview { width: 100%; margin-top: 15px; display: none; }
-
-    #save-btn { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; background: #4B7B9E; color: white; border: none; border-radius: 10px; cursor: pointer; }
-    .close-btn { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #888; line-height: 1; }
-    
-    #status-display { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(75, 123, 158, 0.9); color: white; padding: 12px 24px; border-radius: 30px; font-weight: bold; font-size: 16px; z-index: 1000; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); white-space: nowrap; }
-
-    /* 再生停止ボタン（A面用） */
-    #universal-stop-btn { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); padding: 15px 30px; background-color: #e74c3c; color: white; border-radius: 30px; display: none; justify-content: center; align-items: center; font-weight: bold; font-size: 18px; z-index: 1500; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 2px solid #fff; cursor: pointer; width: 80%; max-width: 300px; text-align: center; }
   </style>
 </head>
 <body>
 
-  <div id="status-display">マーカーを認識しました！</div>
-  
-  <!-- A面で表示する停止ボタン -->
-  <button id="universal-stop-btn">再生停止 ⬛</button>
-  
-  <!-- B面で表示する返信ボタン -->
-  <button id="show-record-btn">返信を録音する 🎤</button>
+  <div id="status-msg">マグネット本体を映してください</div>
 
-  <audio id="music1" src="music/music1.mp3" preload="auto" style="display: none;"></audio>
-  <audio id="recorded-audio" preload="auto" style="display: none;"></audio>
-
-  <div id="start-overlay">
-    <h2>想いマグ - 通信機</h2>
-    <p style="font-size: 16px; margin-bottom: 20px;">カメラを許可し、マナーモードを<br>解除してお楽しみください</p>
-    <button id="start-btn">スタート</button>
-  </div>
-
-  <!-- 返信用録音モーダル（B面からのみ開く） -->
-  <div id="settings-modal">
-    <span class="close-btn" id="close-btn">×</span>
-    <h3 style="margin-top:0; color: #333; text-align: center;">相手へ返信する</h3>
-    
-    <div class="setting-section">
-      <h4>① あなたの声を録音（話した言葉が自動入力されます）</h4>
-
-      <!-- REC点滅 & カセットタイマー表示部 -->
-      <div id="rec-indicator" class="rec-indicator-box">
-        <div class="rec-badge">
-          <div class="rec-dot"></div>
-          <span>REC</span>
-        </div>
-        <div id="rec-timer">00:00 / 00:30</div>
-      </div>
-
-      <div class="record-controls">
-        <button id="record-btn" class="record-btn">録音開始 🔴</button>
-        <button id="stop-btn" class="stop-btn" disabled>停止 ⬛</button>
-      </div>
-      <audio id="preview-audio" class="audio-preview" controls></audio>
-    </div>
-
-    <!-- テキスト入力欄（音声認識で自動入力・手動修正可能） -->
-    <div class="setting-section">
-      <h4>② 表示メッセージ確認 (15文字まで)</h4>
-      <div class="form-group">
-        <input type="text" id="input-msg-b" placeholder="音声認識でここに入ります" maxlength="15">
-      </div>
-    </div>
-
-    <button id="save-btn">この内容で返信する（保存）</button>
-  </div>
-
+  <!-- MindAR シーン設定 -->
   <a-scene 
-    embedded
-    renderer="alpha: true; colorManagement: true;"
-    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
-    vr-mode-ui="enabled: false"
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: yes; uiScanning: yes;" 
+    color-space="sRGB" 
+    renderer="colorManagement: true, physicallyCorrectLights" 
+    vr-mode-ui="enabled: false" 
     device-orientation-permission-ui="enabled: false">
     
-    <a-light type="ambient" color="#ffffff" intensity="0.7"></a-light>
-    <a-light type="directional" color="#ffffff" intensity="0.8" position="-1 2 1"></a-light>
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- A面（聞く面：Hiroマーカー） -->
-    <a-marker preset="hiro" id="marker-a" emitevents="true">
-      <a-box scale="0.01 0.01 0.01" material="transparent: true; opacity: 0;"></a-box>
-    </a-marker>
-    
-    <!-- B面（話す面：Kanjiマーカー） -->
-    <a-marker preset="kanji" id="marker-b" emitevents="true">
-      <a-box scale="0.01 0.01 0.01" material="transparent: true; opacity: 0;"></a-box>
-    </a-marker>
-
-    <a-entity camera>
-      <!-- ▼ A面用コンテンツ（再生） -->
-      <a-entity id="ui-a" visible="false">
-        <a-entity id="paper-a" scale="0 0 0" position="0 1.0 -5" rotation="0 0 0">
-          <a-plane color="#FDF5E6" material="shader: flat; side: double;" position="0 0 0" scale="2 0.5 1"></a-plane>
-          <a-plane id="ar-text-a" canvas-text="value: メッセージが届いています; color: #333333;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
-        </a-entity>
-        <a-entity id="model-a" gltf-model="url(models/bear.glb)" scale="0.4 0.4 0.4" position="0 -1.2 -5"></a-entity>
+    <!-- targets.mind の 0番目（登録したマグネット画像）に追従するターゲット -->
+    <a-entity mindar-image-target="targetIndex: 0" id="magnet-target">
+      
+      <!-- テスト用：マグネットの上に青い半透明平面を重ねて位置確認 -->
+      <a-plane color="#4B7B9E" opacity="0.4" position="0 0 0" height="0.55" width="1"></a-plane>
+      
+      <!-- くまの3Dモデル（マグネットの手前に立ち上がる） -->
+      <a-entity 
+        gltf-model="url(models/bear.glb)" 
+        scale="0.25 0.25 0.25" 
+        position="0 -0.1 0.1" 
+        rotation="0 0 0">
       </a-entity>
 
-      <!-- ▼ B面用コンテンツ（録音案内） -->
-      <a-entity id="ui-b" visible="false">
-        <a-entity id="paper-b" scale="0 0 0" position="0 1.0 -5" rotation="0 0 0">
-          <a-plane color="#FDF5E6" material="shader: flat; side: double;" position="0 0 0" scale="2 0.5 1"></a-plane>
-          <a-plane canvas-text="value: 画面から返信を録音してね; color: #E88C30;" position="0 0 0.05" scale="2 0.5 1" material="transparent: true; opacity: 1; alphaTest: 0.5;"></a-plane>
-        </a-entity>
-        <a-entity id="model-b" gltf-model="url(models/bear.glb)" scale="0.4 0.4 0.4" position="0 -1.2 -5"></a-entity>
-      </a-entity>
     </a-entity>
   </a-scene>
 
   <script>
-    const DELAY_TIME_MS = 1500; 
+    const statusMsg = document.getElementById('status-msg');
+    const target = document.getElementById('magnet-target');
 
-    const startOverlay = document.getElementById('start-overlay');
-    const startBtn = document.getElementById('start-btn');
-    const settingsModal = document.getElementById('settings-modal');
-    const closeBtn = document.getElementById('close-btn');
-    const saveBtn = document.getElementById('save-btn');
-    const statusDisplay = document.getElementById('status-display');
-    const universalStopBtn = document.getElementById('universal-stop-btn');
-    const showRecordBtn = document.getElementById('show-record-btn');
-    
-    const uiA = document.getElementById('ui-a');
-    const uiB = document.getElementById('ui-b');
-    const paperA = document.getElementById('paper-a');
-    const paperB = document.getElementById('paper-b');
-
-    const inputMsgB = document.getElementById('input-msg-b'); 
-    const recordBtn = document.getElementById('record-btn');
-    const stopBtn = document.getElementById('stop-btn');
-    const previewAudio = document.getElementById('preview-audio');
-    const recordedAudio = document.getElementById('recorded-audio');
-    const arTextA = document.getElementById('ar-text-a');
-
-    const recIndicator = document.getElementById('rec-indicator');
-    const recTimer = document.getElementById('rec-timer');
-
-    let mediaRecorder;
-    let audioChunks = [];
-    let isAudioUnlocked = false;
-    let activeBGM = null; 
-    let activeVoice = null;
-    let actionTimeout = null;
-    let hasRecordedMessage = false;
-
-    // タイマー制御用変数（最大30秒）
-    let timerInterval = null;
-    let recordedSeconds = 0;
-    const MAX_RECORD_SECONDS = 30;
-
-    // 音声認識（Web Speech API）の初期化
-    let recognition = null;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (SpeechRecognition) {
-      recognition = new SpeechRecognition();
-      recognition.lang = 'ja-JP';
-      recognition.interimResults = true;
-      recognition.continuous = true;
-
-      recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          transcript += event.results[i][0].transcript;
-        }
-        if (transcript.trim() !== '') {
-          inputMsgB.value = transcript.slice(0, 15);
-        }
-      };
-
-      recognition.onerror = (e) => {
-        console.warn('音声認識エラー:', e.error);
-      };
-    }
-
-    // 録音処理の開始
-    recordBtn.addEventListener('click', async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioChunks.push(e.data);
-        };
-        
-        mediaRecorder.onstop = () => {
-          const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
-          const audioUrl = URL.createObjectURL(audioBlob);
-          previewAudio.src = audioUrl;
-          previewAudio.style.display = 'block';
-          recordedAudio.src = audioUrl; 
-          hasRecordedMessage = true;
-        };
-        
-        mediaRecorder.start();
-
-        // 音声認識の開始
-        if (recognition) {
-          inputMsgB.value = '';
-          try { recognition.start(); } catch(err) { console.warn(err); }
-        }
-
-        // タイマー & REC演出の開始
-        recordedSeconds = 0;
-        updateTimerDisplay();
-        recIndicator.style.display = 'flex';
-        clearInterval(timerInterval);
-        timerInterval = setInterval(() => {
-          recordedSeconds++;
-          updateTimerDisplay();
-          // 30秒に達したら自動停止
-          if (recordedSeconds >= MAX_RECORD_SECONDS) {
-            stopRecording();
-          }
-        }, 1000);
-
-        recordBtn.disabled = true;
-        stopBtn.disabled = false;
-        recordBtn.innerText = '録音中...';
-      } catch (err) {
-        alert('マイクのアクセスが拒否されたか、エラーが発生しました。');
-      }
+    // マグネットを認識した時
+    target.addEventListener("targetFound", () => {
+      statusMsg.innerText = "想いマグを認識しました！";
+      statusMsg.style.background = "rgba(46, 204, 113, 0.85)";
     });
 
-    function updateTimerDisplay() {
-      const curMin = String(Math.floor(recordedSeconds / 60)).padStart(2, '0');
-      const curSec = String(recordedSeconds % 60).padStart(2, '0');
-      const maxMin = String(Math.floor(MAX_RECORD_SECONDS / 60)).padStart(2, '0');
-      const maxSec = String(MAX_RECORD_SECONDS % 60).padStart(2, '0');
-      recTimer.innerText = `${curMin}:${curSec} / ${maxMin}:${maxSec}`;
-    }
-
-    function stopRecording() {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach(track => track.stop()); 
-      }
-      if (recognition) {
-        try { recognition.stop(); } catch(err) { console.warn(err); }
-      }
-      clearInterval(timerInterval);
-      recIndicator.style.display = 'none';
-
-      recordBtn.disabled = false;
-      stopBtn.disabled = true;
-      recordBtn.innerText = 'もう一度録音する';
-    }
-
-    stopBtn.addEventListener('click', stopRecording);
-
-    startBtn.addEventListener('click', () => {
-      startOverlay.style.display = 'none'; 
-      const videos = document.querySelectorAll('video');
-      videos.forEach(video => video.play().catch(e => console.warn("Camera error:", e)));
-
-      if (!isAudioUnlocked) {
-        document.getElementById('music1').load();
-        recordedAudio.load();
-        isAudioUnlocked = true;
-      }
-    });
-
-    showRecordBtn.addEventListener('click', () => settingsModal.classList.add('active'));
-    closeBtn.addEventListener('click', () => {
-      if (mediaRecorder && mediaRecorder.state === 'recording') {
-        stopRecording();
-      }
-      settingsModal.classList.remove('active');
-    });
-
-    // 保存ボタンを押した時の処理
-    saveBtn.addEventListener('click', () => {
-      if (mediaRecorder && mediaRecorder.state === 'recording') {
-        stopRecording();
-      }
-      settingsModal.classList.remove('active'); 
-      showRecordBtn.style.display = 'none'; 
-      
-      let newMsg = inputMsgB.value.trim();
-      if (newMsg === '') {
-        newMsg = "新しい返信が届きました";
-      }
-      
-      arTextA.setAttribute('canvas-text', 'value', newMsg);
-      alert("返信を保存しました！\n（A面をかざすと確認できます）");
-    });
-
-    function playTargetMusic(bgmId, voiceId, uiElement, paperElement) {
-      if (activeBGM) { activeBGM.pause(); activeBGM.currentTime = 0; }
-      if (activeVoice) { activeVoice.pause(); activeVoice.currentTime = 0; }
-      
-      activeBGM = document.getElementById(bgmId);
-      activeVoice = hasRecordedMessage ? document.getElementById(voiceId) : null;
-
-      if (activeVoice) {
-        activeVoice.play().catch(e => console.error("Voice play failed:", e)); 
-      }
-      if (activeBGM) {
-        activeBGM.volume = activeVoice ? 0.3 : 1.0; 
-        activeBGM.play().catch(e => console.error("BGM play failed:", e)); 
-      }
-    }
-
-    // 停止ボタンを押したときの処理
-    function stopAllMediaAndHide() {
-      if (actionTimeout) clearTimeout(actionTimeout);
-      if (activeBGM) { activeBGM.pause(); activeBGM.currentTime = 0; }
-      if (activeVoice) { activeVoice.pause(); activeVoice.currentTime = 0; }
-      
-      paperA.setAttribute('scale', '0 0 0');
-      paperB.setAttribute('scale', '0 0 0');
-      universalStopBtn.style.display = 'none';
-    }
-
-    universalStopBtn.addEventListener('click', stopAllMediaAndHide);
-
-    // ==========================================
-    // A面マーカーを見つけた時の動作（聞く）
-    // ==========================================
-    const markerA = document.getElementById('marker-a');
-    markerA.addEventListener('markerFound', () => {
-      if(actionTimeout) clearTimeout(actionTimeout); 
-      statusDisplay.innerText = "A面：メッセージを再生します";
-      statusDisplay.style.display = "block";
-      
-      showRecordBtn.style.display = "none"; 
-      universalStopBtn.style.display = "flex"; 
-      
-      uiA.setAttribute('visible', true);
-      uiB.setAttribute('visible', false);
-      paperA.setAttribute('scale', '0 0 0');
-      
-      document.getElementById('model-a').setAttribute('animation-mixer', 'clip: *; loop: once; clampWhenFinished: true;');
-      
-      actionTimeout = setTimeout(() => {
-        paperA.setAttribute('scale', '1 1 1'); 
-        playTargetMusic('music1', 'recorded-audio', uiA, paperA); 
-      }, DELAY_TIME_MS);
-    });
-
-    markerA.addEventListener('markerLost', () => {
-      statusDisplay.style.display = "none";
-    });
-
-    // ==========================================
-    // B面マーカーを見つけた時の動作（話す・録音する）
-    // ==========================================
-    const markerB = document.getElementById('marker-b');
-    markerB.addEventListener('markerLost', () => {
-      statusDisplay.style.display = "none";
-    });
-
-    markerB.addEventListener('markerFound', () => {
-      if(actionTimeout) clearTimeout(actionTimeout); 
-      stopAllMediaAndHide(); 
-      
-      statusDisplay.innerText = "B面：返信モード";
-      statusDisplay.style.display = "block";
-      
-      showRecordBtn.style.display = "block"; 
-      universalStopBtn.style.display = "none"; 
-      
-      uiB.setAttribute('visible', true);
-      uiA.setAttribute('visible', false);
-      paperB.setAttribute('scale', '0 0 0');
-      
-      document.getElementById('model-b').setAttribute('animation-mixer', 'clip: *; loop: once; clampWhenFinished: true;');
-      
-      actionTimeout = setTimeout(() => {
-        paperB.setAttribute('scale', '1 1 1'); 
-      }, DELAY_TIME_MS);
+    // 見失った時
+    target.addEventListener("targetLost", () => {
+      statusMsg.innerText = "マグネット本体を映してください";
+      statusMsg.style.background = "rgba(0, 0, 0, 0.75)";
     });
   </script>
 </body>

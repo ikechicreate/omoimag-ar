@@ -206,42 +206,72 @@
       }
     }
 
-   // 磁気センサーの数値可視化（診断用）
+  // 磁気センサー：回り込み磁力・チャタリング防止フィルター付き
     function initMagnetometer() {
       if ('Magnetometer' in window) {
         try {
-          const magSensor = new Magnetometer({ frequency: 10 });
+          const magSensor = new Magnetometer({ frequency: 20 }); // サンプリングを少し細かくする
+          
+          const THRESHOLD = 120;       // 回り込みの弱い逆磁力を拾わないよう少し高めに設定
+          const REQUIRED_STABLE_COUNT = 3; // 連続して検知すべき回数（約0.15秒維持で確定）
+          
+          let countN = 0;
+          let countS = 0;
+          let lastSwitchedTime = 0;
+          const COOLDOWN_MS = 2000;   // 一度切り替わったら2秒間は反転誤検知をガード
+
           magSensor.addEventListener('reading', () => {
             const z = Math.round(magSensor.z);
-            const x = Math.round(magSensor.x);
-            const y = Math.round(magSensor.y);
-            
-            // 画面上部に数値をリアルタイム表示
-            toastMsg.innerText = `Z:${z} (X:${x}, Y:${y})`;
+            const now = Date.now();
+
+            toastMsg.innerText = `Z:${z}`;
             toastMsg.style.opacity = '1';
 
-            const THRESHOLD = 60; // 反応しやすいように感度を緩めました
+            // クールダウン中は切り替え処理をスキップ
+            if (now - lastSwitchedTime < COOLDOWN_MS) {
+              return;
+            }
 
-            if (z > THRESHOLD && currentMode !== 'A') {
-              showToast(`🧲 N極検知 (Z:${z}) -> A面`);
+            // N極判定カウント
+            if (z > THRESHOLD) {
+              countN++;
+              countS = 0;
+            } 
+            // S極判定カウント
+            else if (z < -THRESHOLD) {
+              countS++;
+              countN = 0;
+            } 
+            // 境界値未満はカウントリセット
+            else {
+              countN = 0;
+              countS = 0;
+            }
+
+            // 安定してN極が検知された場合
+            if (countN >= REQUIRED_STABLE_COUNT && currentMode !== 'A') {
+              showToast(`🧲 A面を認識しました (N極 / Z:${z})`);
               setMode('A', '磁力');
-            } else if (z < -THRESHOLD && currentMode !== 'B') {
-              showToast(`🧲 S極検知 (Z:${z}) -> B面`);
+              lastSwitchedTime = now;
+              countN = 0;
+            }
+            // 安定してS極が検知された場合
+            else if (countS >= REQUIRED_STABLE_COUNT && currentMode !== 'B') {
+              showToast(`🧲 B面を認識しました (S極 / Z:${z})`);
               setMode('B', '磁力');
+              lastSwitchedTime = now;
+              countS = 0;
             }
           });
 
           magSensor.addEventListener('error', e => {
-            showToast(`センサーエラー: ${e.error.name}`);
             console.warn('磁気センサーエラー:', e.error);
           });
 
           magSensor.start();
         } catch (e) {
-          showToast(`初期化失敗: ${e.message}`);
+          console.warn('磁気センサー初期化失敗:', e);
         }
-      } else {
-        showToast("この端末はMagnetometer非対応です");
       }
     }
     

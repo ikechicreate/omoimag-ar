@@ -83,8 +83,8 @@
   <button id="universal-stop-btn">再生する ▶</button>
   <button id="show-record-btn">返信を録音する 🎤</button>
 
-  <audio id="music1" src="music/music1.mp3" preload="auto" style="display: none;"></audio>
-  <audio id="recorded-audio" preload="auto" style="display: none;"></audio>
+  <audio id="music1" src="music/music1.mp3" preload="none" style="display: none;"></audio>
+  <audio id="recorded-audio" preload="none" style="display: none;"></audio>
 
   <div id="start-overlay">
     <h2>想いマグ - 通信機</h2>
@@ -337,7 +337,7 @@
       setMode('A', '手動');
     });
 
-    startBtn.addEventListener('click', () => {
+   startBtn.addEventListener('click', () => {
       startOverlay.style.display = 'none';
       const videos = document.querySelectorAll('video');
       videos.forEach(v => v.play().catch(e => {}));

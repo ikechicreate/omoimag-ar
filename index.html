@@ -185,10 +185,21 @@
       toastTimeout = setTimeout(() => { toastMsg.style.opacity = '0'; }, 3000);
     }
 
-    // A面・B面の切り替え関数
+  // A面・B面の切り替え関数
     function setMode(mode, trigger = '手動') {
       currentMode = mode;
-      mainContent.setAttribute('visible', true);
+      
+      // ▼修正1：確実に3Dモデルの表示をONにする
+      mainContent.setAttribute('visible', 'true');
+      if (mainContent.object3D) {
+        mainContent.object3D.visible = true;
+      }
+
+      // ▼修正2：MindARのスキャン画面（青い枠線など）を強制的に隠す
+      const scanningUI = document.querySelector('.mindar-ui-scanning');
+      if (scanningUI) {
+        scanningUI.style.display = 'none';
+      }
 
       if (mode === 'A') {
         statusMsg.innerText = `A面：再生中 (${trigger})`;

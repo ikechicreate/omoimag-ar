@@ -10,10 +10,7 @@
 
   <script>
     AFRAME.registerComponent('canvas-text', {
-      schema: {
-        value: { type: 'string', default: 'メッセージが届いています' },
-        color: { type: 'string', default: '#333333' }
-      },
+      schema: { value: { type: 'string', default: 'メッセージが届いています' }, color: { type: 'string', default: '#333333' } },
       init: function () {
         this.canvas = document.createElement('canvas');
         const dpr = window.devicePixelRatio || 2; 
@@ -23,10 +20,7 @@
         this.ctx.scale(dpr, dpr);
         this.texture = new THREE.CanvasTexture(this.canvas);
         this.material = new THREE.MeshBasicMaterial({ map: this.texture, transparent: true, side: THREE.DoubleSide });
-        const applyMaterial = () => {
-          const mesh = this.el.getObject3D('mesh');
-          if (mesh) { mesh.material = this.material; this.drawText(); }
-        };
+        const applyMaterial = () => { const mesh = this.el.getObject3D('mesh'); if (mesh) { mesh.material = this.material; this.drawText(); } };
         if (this.el.hasLoaded) { applyMaterial(); } else { this.el.addEventListener('loaded', applyMaterial); }
       },
       update: function () { if (this.ctx) { this.drawText(); } },
@@ -44,200 +38,24 @@
 
   <style>
     body { margin: 0; overflow: hidden; font-family: 'Helvetica Neue', Arial, sans-serif; background-color: transparent !important; }
-    /* MindARのスキャンUIがボタンのタッチを邪魔するのを防ぐ */
-    .mindar-ui-overlay { pointer-events: none !important; z-index: 10 !important; }
-    /* スタート画面を最前面（999999）に固定して確実に押せるようにする */
-    #start-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 999999 !important; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 20px; box-sizing: border-box; }
+    
+    /* ▼ タッチを妨害されないための最強のUIレイヤー */
+    #ui-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 999999; pointer-events: none; }
+    .clickable { pointer-events: auto !important; }
+
+    #start-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 20px; box-sizing: border-box; transition: opacity 0.3s; }
     #start-btn { padding: 15px 40px; font-size: 20px; font-weight: bold; background: #FF8C00; color: white; border: none; border-radius: 30px; cursor: pointer; margin-top: 20px; }
-    #status-msg { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.75); color: #fff; padding: 10px 24px; border-radius: 20px; font-size: 15px; font-weight: bold; z-index: 1000; pointer-events: none; white-space: nowrap; transition: background 0.3s; }
-    #toast-msg { position: fixed; top: 120px; left: 50%; transform: translateX(-50%); background: rgba(255, 215, 0, 0.95); color: #000; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: bold; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-    #manual-controls { position: fixed; top: 65px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 99999 !important; pointer-events: auto !important; }
+    
+    #status-msg { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.75); color: #fff; padding: 10px 24px; border-radius: 20px; font-size: 15px; font-weight: bold; white-space: nowrap; transition: background 0.3s; }
+    #toast-msg { position: fixed; top: 120px; left: 50%; transform: translateX(-50%); background: rgba(255, 215, 0, 0.95); color: #000; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: bold; opacity: 0; transition: opacity 0.3s; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+    
+    #manual-controls { position: fixed; top: 65px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
     .manual-btn { padding: 8px 16px; background: rgba(255,255,255,0.95); border: 1px solid #aaa; border-radius: 15px; font-size: 13px; font-weight: bold; color: #333; cursor: pointer; }
-    #universal-stop-btn { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); padding: 15px 30px; background-color: #27ae60; color: white; border-radius: 30px; display: none; justify-content: center; align-items: center; font-weight: bold; font-size: 18px; z-index: 99999 !important; cursor: pointer; width: 80%; max-width: 300px; }
-    #show-record-btn { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); padding: 15px 30px; font-size: 18px; font-weight: bold; background: #E88C30; color: white; border: none; border-radius: 30px; cursor: pointer; display: none; z-index: 99999 !important; width: 80%; max-width: 300px; }
-    #settings-modal { position: absolute; bottom: -100%; left: 0; width: 100%; height: auto; max-height: 90vh; overflow-y: auto; padding-bottom: 40px; background: white; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; box-sizing: border-box; z-index: 2000; transition: bottom 0.3s ease-in-out; }
+    
+    #universal-stop-btn { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); padding: 15px 30px; background-color: #27ae60; color: white; border-radius: 30px; display: none; justify-content: center; align-items: center; font-weight: bold; font-size: 18px; cursor: pointer; width: 80%; max-width: 300px; }
+    #show-record-btn { position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%); padding: 15px 30px; font-size: 18px; font-weight: bold; background: #E88C30; color: white; border: none; border-radius: 30px; cursor: pointer; display: none; width: 80%; max-width: 300px; }
+    
+    #settings-modal { position: absolute; bottom: -100%; left: 0; width: 100%; height: auto; max-height: 90vh; overflow-y: auto; padding-bottom: 40px; background: white; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; box-sizing: border-box; transition: bottom 0.3s ease-in-out; }
     #settings-modal.active { bottom: 0; }
     .setting-section { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #E88C30; }
     .setting-section h4 { margin-top: 0; margin-bottom: 12px; color: #333; font-size: 15px; font-weight: bold; }
-    .form-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
-    .rec-indicator-box { display: none; align-items: center; justify-content: space-between; background: #222; color: #00ff66; font-family: monospace; padding: 10px 16px; border-radius: 6px; margin-bottom: 12px; font-size: 18px; font-weight: bold; }
-    .rec-badge { display: flex; align-items: center; gap: 8px; color: #ff3b30; }
-    .rec-dot { width: 14px; height: 14px; background-color: #ff3b30; border-radius: 50%; animation: blink 1s infinite; }
-    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-    .record-controls { display: flex; gap: 10px; margin-top: 10px; }
-    .record-btn, .stop-btn { flex: 1; padding: 14px; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; color: white; }
-    .record-btn { background: #e74c3c; } .stop-btn { background: #34495e; }
-    .record-btn:disabled, .stop-btn:disabled { background: #ccc; }
-    .audio-preview { width: 100%; margin-top: 15px; display: none; }
-    #save-btn { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; background: #4B7B9E; color: white; border: none; border-radius: 10px; cursor: pointer; }
-    .close-btn { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #888; }
-  </style>
-</head>
-<body>
-
-  <div id="status-msg">想いマグを映してください</div>
-  <div id="toast-msg"></div>
-
-  <div id="manual-controls">
-　　　<button class="manual-btn" id="btn-force-a" onclick="setMode('A', '手動')">A面（待機）</button>
-     <button class="manual-btn" id="btn-force-b" onclick="setMode('B', '手動')">B面（録音）</button>
-  </div>
-  
-  <button id="universal-stop-btn">再生する ▶</button>
-  <button id="show-record-btn">返信を録音する 🎤</button>
-
-  <audio id="music1" src="music/music1.mp3" preload="none" style="display: none;"></audio>
-  <audio id="recorded-audio" preload="none" style="display: none;"></audio>
-
-  <div id="start-overlay">
-    <h2>想いマグ - 通信機</h2>
-    <p style="font-size: 16px; margin-bottom: 20px;">カメラとセンサーを許可し<br>マナーモードを解除してください</p>
-    <button id="start-btn" onclick="document.getElementById('start-overlay').style.display='none';">スタート</button>
-  </div>
-
-  <div id="settings-modal">
-    <span class="close-btn" id="close-btn">×</span>
-    <h3 style="margin-top:0; color: #333; text-align: center;">相手へ返信する</h3>
-    
-    <div class="setting-section">
-      <h4>① 音声メッセージの録音</h4>
-      <div id="rec-indicator" class="rec-indicator-box">
-        <div class="rec-badge"><div class="rec-dot"></div><span>REC</span></div>
-        <div id="rec-timer">00:00 / 00:30</div>
-      </div>
-      <div class="record-controls">
-        <button id="record-btn" class="record-btn">録音開始 🔴</button>
-        <button id="stop-btn" class="stop-btn" disabled>停止 ⬛</button>
-      </div>
-      <audio id="preview-audio" class="audio-preview" controls></audio>
-    </div>
-
-    <div class="setting-section">
-      <h4>② 表示メッセージ入力 (15文字まで)</h4>
-      <div class="form-group">
-        <input type="text" id="input-msg-b" placeholder="文字を入力してください" maxlength="15">
-      </div>
-    </div>
-    <button id="save-btn">この内容で返信する（保存）</button>
-  </div>
-
-  <a-scene 
-    mindar-image="imageTargetSrc: targets.mind; autoStart: true; uiLoading: yes; uiScanning: yes;" 
-    color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" 
-    vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-    
-    <!-- 変更ポイント：ARターゲット(magnet-target)の外側に main-content を配置し、カメラ固定にしました -->
-    <a-camera position="0 0 0" look-controls="enabled: false">
-      <a-entity id="main-content" visible="false" position="0 0 -3">
-        <a-entity id="paper-display" scale="0.8 0.8 0.8" position="0 1.0 0">
-          <a-plane color="#FDF5E6" material="shader: flat; side: double;" scale="2 0.5 1"></a-plane>
-          <a-plane id="ar-text" canvas-text="value: メッセージが届いています; color: #333333;" position="0 0 0.05" scale="2 0.5 1"></a-plane>
-        </a-entity>
-        <a-entity id="bear-model" gltf-model="url(models/bear.glb)" scale="0.25 0.25 0.25" position="0 -1.0 0"></a-entity>
-      </a-entity>
-    </a-camera>
-    
-    <a-entity mindar-image-target="targetIndex: 0" id="magnet-target"></a-entity>
-
-  </a-scene>
-
-  <script>
-    const statusMsg = document.getElementById('status-msg');
-    const toastMsg = document.getElementById('toast-msg');
-    const target = document.getElementById('magnet-target');
-    const mainContent = document.getElementById('main-content');
-    const arText = document.getElementById('ar-text');
-    const universalStopBtn = document.getElementById('universal-stop-btn');
-    const showRecordBtn = document.getElementById('show-record-btn');
-    const startOverlay = document.getElementById('start-overlay');
-    const startBtn = document.getElementById('start-btn');
-    const settingsModal = document.getElementById('settings-modal');
-    const closeBtn = document.getElementById('close-btn');
-    const saveBtn = document.getElementById('save-btn');
-    const inputMsgB = document.getElementById('input-msg-b');
-    const recordBtn = document.getElementById('record-btn');
-    const stopBtn = document.getElementById('stop-btn');
-    const previewAudio = document.getElementById('preview-audio');
-    const recordedAudio = document.getElementById('recorded-audio');
-    const recIndicator = document.getElementById('rec-indicator');
-    const recTimer = document.getElementById('rec-timer');
-
-    let currentMode = 'A';
-    let mediaRecorder;
-    let audioChunks = [];
-    let isAudioUnlocked = false;
-    let activeBGM = null;
-    let hasRecordedMessage = false;
-    let timerInterval = null;
-    let recordedSeconds = 0;
-    const MAX_RECORD_SECONDS = 30;
-    let toastTimeout = null;
-    let isPlaying = false; 
-
-    function showToast(msg) {
-      toastMsg.innerText = msg;
-      toastMsg.style.opacity = '1';
-      if(toastTimeout) clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => { toastMsg.style.opacity = '0'; }, 3000);
-    }
-
-    function setMode(mode, trigger = '手動') {
-      currentMode = mode;
-      mainContent.setAttribute('visible', 'true');
-
-      // MindARのスキャンUI(青い枠線)を強制的に隠す
-      const scanningUI = document.querySelector('.mindar-ui-scanning');
-      if (scanningUI) scanningUI.style.display = 'none';
-
-      if (mode === 'A') {
-        statusMsg.innerText = `A面：待機中 (${trigger})`;
-        statusMsg.style.background = "rgba(46, 204, 113, 0.9)";
-        showRecordBtn.style.display = 'none';
-        universalStopBtn.style.display = 'flex';
-        
-        stopMusic();
-        universalStopBtn.innerText = '再生する ▶';
-        universalStopBtn.style.backgroundColor = '#27ae60';
-        isPlaying = false;
-
-      } else {
-        statusMsg.innerText = `B面：返信モード (${trigger})`;
-        statusMsg.style.background = "rgba(232, 140, 48, 0.9)";
-        universalStopBtn.style.display = 'none';
-        showRecordBtn.style.display = 'block';
-        stopMusic();
-        arText.setAttribute('canvas-text', 'value: 返信を録音してね; color: #E88C30;');
-      }
-    }
-
-    // 手動ボタンのイベント
-    document.getElementById('btn-force-a').addEventListener('click', () => setMode('A', '手動'));
-    document.getElementById('btn-force-b').addEventListener('click', () => setMode('B', '手動'));
-
-    universalStopBtn.addEventListener('click', () => {
-      if (isPlaying) {
-        stopMusic();
-        universalStopBtn.innerText = '再生する ▶';
-        universalStopBtn.style.backgroundColor = '#27ae60';
-        statusMsg.innerText = `A面：待機中`;
-        isPlaying = false;
-      } else {
-        playMusic();
-        universalStopBtn.innerText = '停止 ⬛';
-        universalStopBtn.style.backgroundColor = '#e74c3c';
-        statusMsg.innerText = `A面：再生中`;
-        isPlaying = true;
-      }
-    });
-
-    function initMagnetometer() {
-      if ('Magnetometer' in window) {
-        try {
-          const magSensor = new Magnetometer({ frequency: 20 });
-          const THRESHOLD = 120;
-          const REQUIRED_STABLE_COUNT = 3;
-          let countN = 0, countS = 0, lastSwitchedTime = 0;
-          const COOLDOWN_MS = 2000;
-
-          magSensor.addEventListener('reading', () => {
-            const z

@@ -59,3 +59,295 @@
     #settings-modal.active { bottom: 0; }
     .setting-section { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; border-left: 5px solid #E88C30; }
     .setting-section h4 { margin-top: 0; margin-bottom: 12px; color: #333; font-size: 15px; font-weight: bold; }
+    .form-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
+    .rec-indicator-box { display: none; align-items: center; justify-content: space-between; background: #222; color: #00ff66; font-family: monospace; padding: 10px 16px; border-radius: 6px; margin-bottom: 12px; font-size: 18px; font-weight: bold; }
+    .rec-badge { display: flex; align-items: center; gap: 8px; color: #ff3b30; }
+    .rec-dot { width: 14px; height: 14px; background-color: #ff3b30; border-radius: 50%; animation: blink 1s infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    .record-controls { display: flex; gap: 10px; margin-top: 10px; }
+    .record-btn, .stop-btn { flex: 1; padding: 14px; border: none; border-radius: 6px; font-weight: bold; font-size: 16px; cursor: pointer; color: white; }
+    .record-btn { background: #e74c3c; } .stop-btn { background: #34495e; }
+    .record-btn:disabled, .stop-btn:disabled { background: #ccc; }
+    .audio-preview { width: 100%; margin-top: 15px; display: none; }
+    #save-btn { width: 100%; padding: 15px; font-size: 18px; font-weight: bold; background: #4B7B9E; color: white; border: none; border-radius: 10px; cursor: pointer; }
+    .close-btn { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #888; }
+  </style>
+</head>
+<body>
+
+  <!-- UIコンテナ（ARにタッチを奪われないようにする絶対安全な箱） -->
+  <div id="ui-container">
+    <div id="status-msg">想いマグを映してください</div>
+    <div id="toast-msg"></div>
+
+    <div id="manual-controls" class="clickable">
+      <button class="manual-btn" onclick="setMode('A', '手動')">A面（待機）</button>
+      <button class="manual-btn" onclick="setMode('B', '手動')">B面（録音）</button>
+    </div>
+    
+    <button id="universal-stop-btn" class="clickable">再生する ▶</button>
+    <button id="show-record-btn" class="clickable">返信を録音する 🎤</button>
+
+    <div id="settings-modal" class="clickable">
+      <span class="close-btn" id="close-btn">×</span>
+      <h3 style="margin-top:0; color: #333; text-align: center;">相手へ返信する</h3>
+      <div class="setting-section">
+        <h4>① 音声メッセージの録音</h4>
+        <div id="rec-indicator" class="rec-indicator-box">
+          <div class="rec-badge"><div class="rec-dot"></div><span>REC</span></div>
+          <div id="rec-timer">00:00 / 00:30</div>
+        </div>
+        <div class="record-controls">
+          <button id="record-btn" class="record-btn">録音開始 🔴</button>
+          <button id="stop-btn" class="stop-btn" disabled>停止 ⬛</button>
+        </div>
+        <audio id="preview-audio" class="audio-preview" controls></audio>
+      </div>
+      <div class="setting-section">
+        <h4>② 表示メッセージ入力 (15文字まで)</h4>
+        <div class="form-group">
+          <input type="text" id="input-msg-b" placeholder="文字を入力してください" maxlength="15">
+        </div>
+      </div>
+      <button id="save-btn">この内容で返信する（保存）</button>
+    </div>
+
+    <!-- スタート画面 -->
+    <div id="start-overlay" class="clickable">
+      <h2>想いマグ - 通信機</h2>
+      <p style="font-size: 16px; margin-bottom: 20px;">カメラとセンサーを許可し<br>マナーモードを解除してください</p>
+      <button id="start-btn">スタート</button>
+    </div>
+  </div>
+
+  <audio id="music1" src="music/music1.mp3" preload="none" style="display: none;"></audio>
+  <audio id="recorded-audio" preload="none" style="display: none;"></audio>
+
+  <!-- AR表示部分 -->
+  <a-scene 
+    mindar-image="imageTargetSrc: targets.mind; autoStart: true; uiLoading: yes; uiScanning: yes;" 
+    color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" 
+    vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+    
+    <!-- 画面固定にするためにカメラの子要素として配置 -->
+    <a-camera position="0 0 0" look-controls="enabled: false">
+      <a-entity id="main-content" visible="false" position="0 0 -3">
+        <a-entity id="paper-display" scale="0.8 0.8 0.8" position="0 1.0 0">
+          <a-plane color="#FDF5E6" material="shader: flat; side: double;" scale="2 0.5 1"></a-plane>
+          <a-plane id="ar-text" canvas-text="value: メッセージが届いています; color: #333333;" position="0 0 0.05" scale="2 0.5 1"></a-plane>
+        </a-entity>
+        <a-entity id="bear-model" gltf-model="url(models/bear.glb)" scale="0.25 0.25 0.25" position="0 -1.0 0"></a-entity>
+      </a-entity>
+    </a-camera>
+    
+    <a-entity mindar-image-target="targetIndex: 0" id="magnet-target"></a-entity>
+  </a-scene>
+
+  <script>
+    const statusMsg = document.getElementById('status-msg');
+    const toastMsg = document.getElementById('toast-msg');
+    const target = document.getElementById('magnet-target');
+    const mainContent = document.getElementById('main-content');
+    const arText = document.getElementById('ar-text');
+    const universalStopBtn = document.getElementById('universal-stop-btn');
+    const showRecordBtn = document.getElementById('show-record-btn');
+    const startOverlay = document.getElementById('start-overlay');
+    const startBtn = document.getElementById('start-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const closeBtn = document.getElementById('close-btn');
+    const saveBtn = document.getElementById('save-btn');
+    const inputMsgB = document.getElementById('input-msg-b');
+    const recordBtn = document.getElementById('record-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const previewAudio = document.getElementById('preview-audio');
+    const recordedAudio = document.getElementById('recorded-audio');
+    const recIndicator = document.getElementById('rec-indicator');
+    const recTimer = document.getElementById('rec-timer');
+
+    let currentMode = 'A';
+    let mediaRecorder;
+    let audioChunks = [];
+    let isAudioUnlocked = false;
+    let activeBGM = null;
+    let hasRecordedMessage = false;
+    let timerInterval = null;
+    let recordedSeconds = 0;
+    const MAX_RECORD_SECONDS = 30;
+    let toastTimeout = null;
+    let isPlaying = false; 
+
+    function showToast(msg) {
+      toastMsg.innerText = msg;
+      toastMsg.style.opacity = '1';
+      if(toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => { toastMsg.style.opacity = '0'; }, 3000);
+    }
+
+    // A面・B面 切り替え処理
+    window.setMode = function(mode, trigger = '手動') {
+      currentMode = mode;
+      
+      // クマと文字盤を強制的に表示
+      mainContent.setAttribute('visible', 'true');
+
+      // MindARのスキャン枠線を隠す
+      const scanningUI = document.querySelector('.mindar-ui-scanning');
+      if (scanningUI) scanningUI.style.display = 'none';
+
+      if (mode === 'A') {
+        statusMsg.innerText = `A面：待機中 (${trigger})`;
+        statusMsg.style.background = "rgba(46, 204, 113, 0.9)";
+        showRecordBtn.style.display = 'none';
+        universalStopBtn.style.display = 'flex';
+        
+        stopMusic();
+        universalStopBtn.innerText = '再生する ▶';
+        universalStopBtn.style.backgroundColor = '#27ae60';
+        isPlaying = false;
+      } else {
+        statusMsg.innerText = `B面：返信モード (${trigger})`;
+        statusMsg.style.background = "rgba(232, 140, 48, 0.9)";
+        universalStopBtn.style.display = 'none';
+        showRecordBtn.style.display = 'block';
+        
+        stopMusic();
+        arText.setAttribute('canvas-text', 'value: 返信を録音してね; color: #E88C30;');
+      }
+    };
+
+    // 再生ボタン
+    universalStopBtn.addEventListener('click', () => {
+      if (isPlaying) {
+        stopMusic();
+        universalStopBtn.innerText = '再生する ▶';
+        universalStopBtn.style.backgroundColor = '#27ae60';
+        statusMsg.innerText = `A面：待機中`;
+        isPlaying = false;
+      } else {
+        playMusic();
+        universalStopBtn.innerText = '停止 ⬛';
+        universalStopBtn.style.backgroundColor = '#e74c3c';
+        statusMsg.innerText = `A面：再生中`;
+        isPlaying = true;
+      }
+    });
+
+    // 磁気センサー起動
+    function initMagnetometer() {
+      if ('Magnetometer' in window) {
+        try {
+          const magSensor = new Magnetometer({ frequency: 20 });
+          const THRESHOLD = 120;
+          const REQUIRED_STABLE_COUNT = 3;
+          let countN = 0, countS = 0, lastSwitchedTime = 0;
+          const COOLDOWN_MS = 2000;
+
+          magSensor.addEventListener('reading', () => {
+            const z = Math.round(magSensor.z);
+            const now = Date.now();
+            if (now - lastSwitchedTime < COOLDOWN_MS) return;
+
+            if (z > THRESHOLD) { countN++; countS = 0; } 
+            else if (z < -THRESHOLD) { countS++; countN = 0; } 
+            else { countN = 0; countS = 0; }
+
+            if (countN >= REQUIRED_STABLE_COUNT && currentMode !== 'A') {
+              showToast(`🧲 A面を認識しました`);
+              setMode('A', '磁力');
+              lastSwitchedTime = now; countN = 0;
+            } else if (countS >= REQUIRED_STABLE_COUNT && currentMode !== 'B') {
+              showToast(`🧲 B面を認識しました`);
+              setMode('B', '磁力');
+              lastSwitchedTime = now; countS = 0;
+            }
+          });
+          magSensor.start();
+        } catch (e) {}
+      }
+    }
+
+    target.addEventListener("targetFound", () => {
+      setMode(currentMode, 'カメラ');
+    });
+
+    function playMusic() {
+      stopMusic();
+      activeBGM = document.getElementById('music1');
+      const voice = hasRecordedMessage ? recordedAudio : null;
+      if (voice) voice.play().catch(e=>{});
+      if (activeBGM) {
+        activeBGM.volume = voice ? 0.3 : 1.0;
+        activeBGM.play().catch(e=>{});
+      }
+    }
+
+    function stopMusic() {
+      if (activeBGM) { activeBGM.pause(); activeBGM.currentTime = 0; }
+      if (recordedAudio) { recordedAudio.pause(); recordedAudio.currentTime = 0; }
+    }
+
+    // 録音処理
+    recordBtn.addEventListener('click', async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(audioChunks, { type: 'audio/mp3' });
+          const url = URL.createObjectURL(blob);
+          previewAudio.src = url; previewAudio.style.display = 'block';
+          recordedAudio.src = url; hasRecordedMessage = true;
+        };
+        mediaRecorder.start();
+        recordedSeconds = 0; recIndicator.style.display = 'flex';
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+          recordedSeconds++;
+          const cur = String(recordedSeconds).padStart(2, '0');
+          recTimer.innerText = `00:${cur} / 00:30`;
+          if (recordedSeconds >= MAX_RECORD_SECONDS) stopRecordingAction();
+        }, 1000);
+        recordBtn.disabled = true; stopBtn.disabled = false; recordBtn.innerText = '録音中...';
+      } catch (err) { alert('マイクが使用できませんでした。'); }
+    });
+
+    function stopRecordingAction() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(t => t.stop());
+      }
+      clearInterval(timerInterval);
+      recIndicator.style.display = 'none';
+      recordBtn.disabled = false; stopBtn.disabled = true; recordBtn.innerText = 'もう一度録音する';
+    }
+
+    stopBtn.addEventListener('click', stopRecordingAction);
+    showRecordBtn.addEventListener('click', () => settingsModal.classList.add('active'));
+    closeBtn.addEventListener('click', () => settingsModal.classList.remove('active'));
+
+    saveBtn.addEventListener('click', () => {
+      if (mediaRecorder && mediaRecorder.state === 'recording') stopRecordingAction();
+      settingsModal.classList.remove('active');
+      let msg = inputMsgB.value.trim() || "新しい返信が届きました";
+      arText.setAttribute('canvas-text', `value: ${msg}; color: #333333;`);
+      alert("返信を保存しました！\n「再生する」ボタンで聞くことができます。");
+      setMode('A', '手動');
+    });
+
+    // スタートボタン処理
+    startBtn.addEventListener('click', () => {
+      startOverlay.style.display = 'none';
+      try {
+        if (!isAudioUnlocked) {
+          const m1 = document.getElementById('music1');
+          m1.play().then(() => { m1.pause(); m1.currentTime = 0; }).catch(e=>{});
+          recordedAudio.play().then(() => { recordedAudio.pause(); recordedAudio.currentTime = 0; }).catch(e=>{});
+          isAudioUnlocked = true;
+        }
+      } catch(e) {}
+      initMagnetometer();
+    });
+  </script>
+</body>
+</html>

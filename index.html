@@ -112,7 +112,6 @@
     <div class="setting-section">
       <h4>② 表示メッセージ入力 (15文字まで)</h4>
       <div class="form-group">
-        <!-- 音声認識を外し、手動入力用プレースホルダーに変更 -->
         <input type="text" id="input-msg-b" placeholder="文字を入力してください" maxlength="15">
       </div>
     </div>
@@ -124,18 +123,18 @@
     color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" 
     vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
     
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    
-    <!-- 修正箇所：確実に出るようにターゲット追従方式に戻し、サイズを調整 -->
-    <a-entity mindar-image-target="targetIndex: 0" id="magnet-target">
-      <a-entity id="main-content" visible="false">
-        <a-entity id="paper-display" scale="0.4 0.4 0.4" position="0 0.5 0.1">
+    <!-- 変更ポイント：ARターゲット(magnet-target)の外側に main-content を配置し、カメラ固定にしました -->
+    <a-camera position="0 0 0" look-controls="enabled: false">
+      <a-entity id="main-content" visible="false" position="0 0 -3">
+        <a-entity id="paper-display" scale="0.8 0.8 0.8" position="0 1.0 0">
           <a-plane color="#FDF5E6" material="shader: flat; side: double;" scale="2 0.5 1"></a-plane>
           <a-plane id="ar-text" canvas-text="value: メッセージが届いています; color: #333333;" position="0 0 0.05" scale="2 0.5 1"></a-plane>
         </a-entity>
-        <a-entity id="bear-model" gltf-model="url(models/bear.glb)" scale="0.12 0.12 0.12" position="0 -0.2 0.1"></a-entity>
+        <a-entity id="bear-model" gltf-model="url(models/bear.glb)" scale="0.25 0.25 0.25" position="0 -1.0 0"></a-entity>
       </a-entity>
-    </a-entity>
+    </a-camera>
+    
+    <a-entity mindar-image-target="targetIndex: 0" id="magnet-target"></a-entity>
 
   </a-scene>
 
@@ -170,7 +169,7 @@
     let recordedSeconds = 0;
     const MAX_RECORD_SECONDS = 30;
     let toastTimeout = null;
-    let isPlaying = false; // 再生状態のフラグ
+    let isPlaying = false; 
 
     function showToast(msg) {
       toastMsg.innerText = msg;
@@ -179,11 +178,11 @@
       toastTimeout = setTimeout(() => { toastMsg.style.opacity = '0'; }, 3000);
     }
 
-    // 修正箇所：A面に切り替わっても勝手に再生しないように変更
     function setMode(mode, trigger = '手動') {
       currentMode = mode;
       mainContent.setAttribute('visible', 'true');
 
+      // MindARのスキャンUI(青い枠線)を強制的に隠す
       const scanningUI = document.querySelector('.mindar-ui-scanning');
       if (scanningUI) scanningUI.style.display = 'none';
 
@@ -193,7 +192,6 @@
         showRecordBtn.style.display = 'none';
         universalStopBtn.style.display = 'flex';
         
-        // 勝手に再生せず、ボタンを「再生する」状態にリセット
         stopMusic();
         universalStopBtn.innerText = '再生する ▶';
         universalStopBtn.style.backgroundColor = '#27ae60';
@@ -209,7 +207,10 @@
       }
     }
 
-    // 再生/停止の切り替えボタン
+    // 手動ボタンのイベント
+    document.getElementById('btn-force-a').addEventListener('click', () => setMode('A', '手動'));
+    document.getElementById('btn-force-b').addEventListener('click', () => setMode('B', '手動'));
+
     universalStopBtn.addEventListener('click', () => {
       if (isPlaying) {
         stopMusic();
@@ -236,118 +237,4 @@
           const COOLDOWN_MS = 2000;
 
           magSensor.addEventListener('reading', () => {
-            const z = Math.round(magSensor.z);
-            const now = Date.now();
-            if (now - lastSwitchedTime < COOLDOWN_MS) return;
-
-            if (z > THRESHOLD) { countN++; countS = 0; } 
-            else if (z < -THRESHOLD) { countS++; countN = 0; } 
-            else { countN = 0; countS = 0; }
-
-            if (countN >= REQUIRED_STABLE_COUNT && currentMode !== 'A') {
-              showToast(`🧲 A面を認識しました`);
-              setMode('A', '磁力');
-              lastSwitchedTime = now; countN = 0;
-            } else if (countS >= REQUIRED_STABLE_COUNT && currentMode !== 'B') {
-              showToast(`🧲 B面を認識しました`);
-              setMode('B', '磁力');
-              lastSwitchedTime = now; countS = 0;
-            }
-          });
-          magSensor.start();
-        } catch (e) { console.warn('磁気センサー初期化失敗:', e); }
-      }
-    }
-
-    target.addEventListener("targetFound", () => {
-      mainContent.setAttribute('visible', 'true');
-    });
-
-    function playMusic() {
-      stopMusic();
-      activeBGM = document.getElementById('music1');
-      const voice = hasRecordedMessage ? recordedAudio : null;
-      if (voice) voice.play().catch(e => console.warn(e));
-      if (activeBGM) {
-        activeBGM.volume = voice ? 0.3 : 1.0;
-        activeBGM.play().catch(e => console.warn(e));
-      }
-    }
-
-    function stopMusic() {
-      if (activeBGM) { activeBGM.pause(); activeBGM.currentTime = 0; }
-      if (recordedAudio) { recordedAudio.pause(); recordedAudio.currentTime = 0; }
-    }
-
-    recordBtn.addEventListener('click', async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
-        mediaRecorder.onstop = () => {
-          const blob = new Blob(audioChunks, { type: 'audio/mp3' });
-          const url = URL.createObjectURL(blob);
-          previewAudio.src = url;
-          previewAudio.style.display = 'block';
-          recordedAudio.src = url;
-          hasRecordedMessage = true;
-        };
-        mediaRecorder.start();
-
-        recordedSeconds = 0;
-        recIndicator.style.display = 'flex';
-        clearInterval(timerInterval);
-        timerInterval = setInterval(() => {
-          recordedSeconds++;
-          const cur = String(recordedSeconds).padStart(2, '0');
-          recTimer.innerText = `00:${cur} / 00:30`;
-          if (recordedSeconds >= MAX_RECORD_SECONDS) stopRecordingAction();
-        }, 1000);
-
-        recordBtn.disabled = true;
-        stopBtn.disabled = false;
-        recordBtn.innerText = '録音中...';
-      } catch (err) { alert('マイクが使用できませんでした。'); }
-    });
-
-    function stopRecordingAction() {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach(t => t.stop());
-      }
-      clearInterval(timerInterval);
-      recIndicator.style.display = 'none';
-      recordBtn.disabled = false;
-      stopBtn.disabled = true;
-      recordBtn.innerText = 'もう一度録音する';
-    }
-
-    stopBtn.addEventListener('click', stopRecordingAction);
-    showRecordBtn.addEventListener('click', () => settingsModal.classList.add('active'));
-    closeBtn.addEventListener('click', () => settingsModal.classList.remove('active'));
-
-    // 修正箇所：保存後、勝手に再生しない
-    saveBtn.addEventListener('click', () => {
-      if (mediaRecorder && mediaRecorder.state === 'recording') stopRecordingAction();
-      settingsModal.classList.remove('active');
-      let msg = inputMsgB.value.trim() || "新しい返信が届きました";
-      arText.setAttribute('canvas-text', `value: ${msg}; color: #333333;`);
-      alert("返信を保存しました！\n「再生する」ボタンで聞くことができます。");
-      setMode('A', '手動');
-    });
-
-   startBtn.addEventListener('click', () => {
-      startOverlay.style.display = 'none';
-      const videos = document.querySelectorAll('video');
-      videos.forEach(v => v.play().catch(e => {}));
-      if (!isAudioUnlocked) {
-        document.getElementById('music1').load();
-        recordedAudio.load();
-        isAudioUnlocked = true;
-      }
-      initMagnetometer();
-    });
-  </script>
-</body>
-</html>
+            const z
